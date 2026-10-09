@@ -8,10 +8,10 @@ import { getProducts } from "@/lib/store";
 const script = Great_Vibes({ weight: "400", subsets: ["latin", "latin-ext"], variable: "--font-script" });
 
 const collections = [
-  { href: "/urunler/limon-cicegi-kolonyasi", title: "Limon Çiçeği", kicker: "Koleksiyonu", image: "/home/collection-limon.jpg", alt: "Limon ve beyaz çiçekler" },
-  { href: "/urunler/zeytin-cicegi-kolonyasi", title: "Zeytin Çiçeği", kicker: "Koleksiyonu", image: "/home/collection-zeytin.jpg", alt: "Zeytin dalı ve yapraklar" },
-  { href: "/urunler/badem-cicegi-kolonyasi", title: "Badem Çiçeği", kicker: "Koleksiyonu", image: "/home/collection-badem.jpg", alt: "Badem ve beyaz çiçekler" },
-  { href: "/koleksiyonlar/bahce-serisi", title: "Yarımada", kicker: "Koleksiyonu", image: "/home/collection-yarimada.jpg", alt: "Datça kıyısı ve taş yapı" },
+  { id: "limon-cicegi", href: "/urunler/limon-cicegi-kolonyasi", title: "Limon Çiçeği", kicker: "Koleksiyonu", image: "/home/collection-limon.jpg", alt: "Limon ve beyaz çiçekler" },
+  { id: "zeytin-cicegi", href: "/urunler/zeytin-cicegi-kolonyasi", title: "Zeytin Çiçeği", kicker: "Koleksiyonu", image: "/home/collection-zeytin.jpg", alt: "Zeytin dalı ve yapraklar" },
+  { id: "badem-cicegi", href: "/urunler/badem-cicegi-kolonyasi", title: "Badem Çiçeği", kicker: "Koleksiyonu", image: "/home/collection-badem.jpg", alt: "Badem ve beyaz çiçekler" },
+  { id: "yarimada", href: "/koleksiyonlar/bahce-serisi", title: "Yarımada", kicker: "Koleksiyonu", image: "/home/collection-yarimada.jpg", alt: "Datça kıyısı ve taş yapı" },
 ];
 
 export default async function HomePage() {
@@ -35,15 +35,15 @@ export default async function HomePage() {
     : null;
 
   return (
-    <div className={`home ${script.variable}`}>
-      <div className="home-mobile-grove" aria-hidden="true">
+    <div className={`home ${script.variable}`} data-editor-id="home">
+      <div className="home-mobile-grove" data-editor-id="frame.garden.mobile" aria-hidden="true">
         <img src="/home/garden-new.png" alt="" />
       </div>
 
-      <section className="home-hero">
-        <div className="home-copy">
-          <p className="home-kicker">Ege’nin özünden</p>
-          <h1>
+      <section className="home-hero" data-editor-id="home.hero">
+        <div className="home-copy" data-editor-id="home.hero.copy">
+          <p className="home-kicker" data-editor-id="home.hero.kicker">Ege’nin özünden</p>
+          <h1 data-editor-id="home.hero.title">
             Datça’dan
             <br />
             Teninize
@@ -52,16 +52,16 @@ export default async function HomePage() {
             <br />
             Ruhunuza
           </h1>
-          <p className="lede">
+          <p className="lede" data-editor-id="home.hero.text">
             Ege ve Akdeniz’in buluştuğu eşsiz yarımadadan ilham alan, %100 doğal esanslarla hazırlanan özel kolonya koleksiyonumuz.
           </p>
-          <Link className="home-btn" href="/koleksiyonlar">
+          <Link className="home-btn" href="/koleksiyonlar" data-editor-id="home.hero.cta">
             Koleksiyonu Keşfet <span aria-hidden="true">→</span>
           </Link>
         </div>
-        <div className="home-hero-visual">
-          <img src="/home/hero-panel.jpg" alt="Datça kıyısı, taş zemin ve DatçaMis kolonya şişesi" />
-          <p className="home-script">
+        <div className="home-hero-visual" data-editor-id="home.hero.visual">
+          <img src="/home/hero-panel.jpg" alt="Datça kıyısı, taş zemin ve DatçaMis kolonya şişesi" data-editor-id="home.hero.photo" />
+          <p className="home-script" data-editor-id="home.hero.script">
             Ege’nin
             <br />
             İlham Veren
@@ -71,77 +71,77 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <ul className="home-features">
-        <li>
+      <ul className="home-features" data-editor-id="home.features">
+        <li data-editor-id="home.features.natural">
           <LeafIcon />
-          <span>%100 Doğal Esanslar</span>
+          <span data-editor-id="home.features.natural.text">%100 Doğal Esanslar</span>
         </li>
-        <li>
+        <li data-editor-id="home.features.lasting">
           <DropIcon />
-          <span>Kalıcı ve Ferahlatıcı</span>
+          <span data-editor-id="home.features.lasting.text">Kalıcı ve Ferahlatıcı</span>
         </li>
-        <li>
+        <li data-editor-id="home.features.place">
           <PinIcon />
-          <span>Datça’nın Eşsiz Doğasından</span>
+          <span data-editor-id="home.features.place.text">Datça’nın Eşsiz Doğasından</span>
         </li>
-        <li>
+        <li data-editor-id="home.features.gift">
           <GiftIcon />
-          <span>Özel Hediye Paketleme</span>
+          <span data-editor-id="home.features.gift.text">Özel Hediye Paketleme</span>
         </li>
       </ul>
 
-      <section className="home-block">
+      <section className="home-block" data-editor-id="home.collections">
         <div className="home-head">
-          <h2>Koleksiyonlarımız</h2>
-          <Link className="home-more" href="/koleksiyonlar">
+          <h2 data-editor-id="home.collections.title">Koleksiyonlarımız</h2>
+          <Link className="home-more" href="/koleksiyonlar" data-editor-id="home.collections.more">
             Tüm Koleksiyonları Gör →
           </Link>
         </div>
-        <div className="home-collections">
+        <div className="home-collections" data-editor-id="home.collections.grid">
           {collections.map((item) => (
-            <Link className="home-collection" key={item.href} href={item.href}>
-              <img src={item.image} alt={item.alt} />
+            <Link className="home-collection" key={item.id} href={item.href} data-editor-id={`home.collections.card.${item.id}`}>
+              <img src={item.image} alt={item.alt} data-editor-id={`home.collections.card.${item.id}.photo`} />
               <span>
-                <strong>{item.title}</strong>
-                {item.kicker}
-                <em>Keşfet →</em>
+                <strong data-editor-id={`home.collections.card.${item.id}.title`}>{item.title}</strong>
+                <b data-editor-id={`home.collections.card.${item.id}.kicker`}>{item.kicker}</b>
+                <em data-editor-id={`home.collections.card.${item.id}.action`}>Keşfet →</em>
               </span>
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="home-block">
+      <section className="home-block" data-editor-id="home.products">
         <div className="home-head">
           <div>
-            <p className="home-kicker">Öne çıkan ürünler</p>
-            <h2>Doğanın En Saf Notaları</h2>
+            <p className="home-kicker" data-editor-id="home.products.kicker">Öne çıkan ürünler</p>
+            <h2 data-editor-id="home.products.title">Doğanın En Saf Notaları</h2>
           </div>
-          <p>Datça’nın benzersiz bitki örtüsünden ilham alan özel kolonya koleksiyonumuzla tanışın.</p>
+          <p data-editor-id="home.products.text">Datça’nın benzersiz bitki örtüsünden ilham alan özel kolonya koleksiyonumuzla tanışın.</p>
         </div>
         {products ? (
-          <div className="home-products">
+          <div className="home-products" data-editor-id="home.products.grid">
             {products.map((product) => (
               <HomeProductCard key={product.slug} product={product} />
             ))}
           </div>
         ) : (
-          <p>Ürünler yüklenemedi.</p>
+          <p data-editor-id="home.products.empty">Ürünler yüklenemedi.</p>
         )}
       </section>
 
-      <section className="home-story">
-        <img src="/home/story-datca.jpg" alt="Datça denizi, dağlar, taş ev ve begonvil" />
-        <div className="home-story-copy">
-          <h2>Datça’nın İlham Veren Doğası</h2>
-          <p>
+      <section className="home-story" data-editor-id="home.story">
+        <img src="/home/story-datca.jpg" alt="Datça denizi, dağlar, taş ev ve begonvil" data-editor-id="home.story.photo" />
+        <div className="home-story-copy" data-editor-id="home.story.copy">
+          <h2 data-editor-id="home.story.title">Datça’nın İlham Veren Doğası</h2>
+          <p data-editor-id="home.story.text">
             Eşsiz yarımadanın temiz havası, zengin bitki örtüsü ve benzersiz çiçeklerinden ilham alan kokularla doğayı günlük yaşamınıza taşıyoruz.
           </p>
-          <Link className="home-btn" href="/hikayemiz">
+          <Link className="home-btn" href="/hikayemiz" data-editor-id="home.story.cta">
             Hikayemizi Keşfet <span aria-hidden="true">→</span>
           </Link>
         </div>
-        <p className="home-script home-script-story">
+        <p className="home-script home-script-story" data-editor-id="home.story.script">
           Doğal
           <br />
           Sade
@@ -152,29 +152,29 @@ export default async function HomePage() {
         </p>
       </section>
 
-      <section className="home-promos">
-        <Link href="/koleksiyonlar">
-          <img src="/home/promo-hediye.jpg" alt="Yeşil kurdeleli hediye kutuları" />
+      <section className="home-promos" data-editor-id="home.promos">
+        <Link href="/koleksiyonlar" data-editor-id="home.promos.card.hediye">
+          <img src="/home/promo-hediye.jpg" alt="Yeşil kurdeleli hediye kutuları" data-editor-id="home.promos.card.hediye.photo" />
           <span>
-            <strong>Özel Hediye Paketleri</strong>
-            Sevdiklerinize doğanın saf kokusunu hediye edin.
-            <em>Paketleri İncele →</em>
+            <strong data-editor-id="home.promos.card.hediye.title">Özel Hediye Paketleri</strong>
+            <b data-editor-id="home.promos.card.hediye.text">Sevdiklerinize doğanın saf kokusunu hediye edin.</b>
+            <em data-editor-id="home.promos.card.hediye.action">Paketleri İncele →</em>
           </span>
         </Link>
-        <Link href="/urunler">
-          <img src="/home/promo-seyahat.jpg" alt="Seyahat boy kolonya şişeleri" />
+        <Link href="/urunler" data-editor-id="home.promos.card.seyahat">
+          <img src="/home/promo-seyahat.jpg" alt="Seyahat boy kolonya şişeleri" data-editor-id="home.promos.card.seyahat.photo" />
           <span>
-            <strong>Seyahat Boy Ürünler</strong>
-            Her zaman yanınızda, her yerde Datça’nın ferahlığı.
-            <em>Ürünleri İncele →</em>
+            <strong data-editor-id="home.promos.card.seyahat.title">Seyahat Boy Ürünler</strong>
+            <b data-editor-id="home.promos.card.seyahat.text">Her zaman yanınızda, her yerde Datça’nın ferahlığı.</b>
+            <em data-editor-id="home.promos.card.seyahat.action">Ürünleri İncele →</em>
           </span>
         </Link>
-        <Link href="/hikayemiz">
-          <img src="/home/promo-dogal.jpg" alt="Zeytin, badem ve limon" />
+        <Link href="/hikayemiz" data-editor-id="home.promos.card.dogal">
+          <img src="/home/promo-dogal.jpg" alt="Zeytin, badem ve limon" data-editor-id="home.promos.card.dogal.photo" />
           <span>
-            <strong>Doğal İçerikler</strong>
-            Datça’nın bereketli topraklarından gelen bitkisel özler.
-            <em>Daha Fazla Bilgi →</em>
+            <strong data-editor-id="home.promos.card.dogal.title">Doğal İçerikler</strong>
+            <b data-editor-id="home.promos.card.dogal.text">Datça’nın bereketli topraklarından gelen bitkisel özler.</b>
+            <em data-editor-id="home.promos.card.dogal.action">Daha Fazla Bilgi →</em>
           </span>
         </Link>
       </section>

@@ -242,6 +242,37 @@ h1, h2, h3, .display { font-family: var(--font-display); font-weight: 560; lette
 table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 th, td { text-align: left; padding: 0.45rem 0.4rem; border-bottom: 1px solid #eee6da; vertical-align: top; }
 .backdrop { position: fixed; inset: 0; background: rgb(16 24 20 / 35%); z-index: 30; }
+.media-library-upload { margin-bottom: 0.6rem; }
+.media-upload {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  padding: 1rem 0.8rem;
+  border: 1.5px dashed #cdbfa6;
+  border-radius: 0.6rem;
+  background: #fffdf8;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.media-upload.is-dragging { border-color: #1e4a38; background: #eef4ef; }
+.media-upload.is-disabled { opacity: 0.85; background: #f7f4ee; }
+.media-upload-compact { margin-top: 0.5rem; padding: 0.6rem 0.5rem; gap: 0.3rem; }
+.media-upload-button {
+  border: 0;
+  border-radius: 999px;
+  background: #1e4a38;
+  color: #fff;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.media-upload-button:disabled { background: #8a968e; cursor: not-allowed; }
+.media-upload-hint { margin: 0; color: #5c6b61; font-size: 0.78rem; }
+.media-upload-progress { display: grid; gap: 0.25rem; width: 100%; font-size: 0.78rem; color: #24382c; overflow-wrap: anywhere; }
+.media-upload-progress progress { width: 100%; height: 0.45rem; accent-color: #1e4a38; }
+.media-upload-error { margin: 0; color: #a2321f; font-size: 0.8rem; overflow-wrap: anywhere; }
+.media-upload-done { margin: 0; color: #1e4a38; font-size: 0.8rem; }
 
 @media (min-width: 640px) {
   .product-grid, .post-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -398,6 +429,7 @@ th, td { text-align: left; padding: 0.45rem 0.4rem; border-bottom: 1px solid #ee
 .home-collection span, .home-story-copy { position: relative; z-index: 1; }
 .home-collection span { display: grid; padding: 0.95rem 1rem 0.85rem; font-size: 1.02rem; line-height: 1.15; }
 .home-collection strong { font-family: var(--font-display); font-size: 1.55rem; font-weight: 560; }
+.home-collection span b, .home-promos span b { font-weight: 400; }
 .home-collection em, .home-promos em { font-style: normal; font-size: 0.88rem; }
 .home-products { align-items: stretch; }
 .home-product {

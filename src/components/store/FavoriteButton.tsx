@@ -41,12 +41,12 @@ export function toggleFavorite(slug: string) {
   window.dispatchEvent(new Event(EVENT));
 }
 
-export function FavoriteButton({ slug, appearance = "text" }: { slug: string; appearance?: "text" | "icon" }) {
+export function FavoriteButton({ slug, appearance = "text", editorId }: { slug: string; appearance?: "text" | "icon"; editorId?: string }) {
   const slugs = useFavoriteSlugs();
   const on = slugs.includes(slug);
   if (appearance === "icon") {
     return (
-      <button className="fav-icon" type="button" aria-pressed={on} aria-label={on ? "Favorilerden çıkar" : "Favorilere ekle"} onClick={() => toggleFavorite(slug)}>
+      <button className="fav-icon" type="button" aria-pressed={on} aria-label={on ? "Favorilerden çıkar" : "Favorilere ekle"} data-editor-id={editorId} onClick={() => toggleFavorite(slug)}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill={on ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
           <path d="M12 19s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z" />
         </svg>

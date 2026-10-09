@@ -6,14 +6,15 @@ import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { HomeGarden } from "./HomeGarden";
 
-export function StoreFrame({ items, notice, children }: { items: MenuItem[]; notice: string; children: React.ReactNode }) {
-  const home = usePathname() === "/";
+export function StoreFrame({ items, notice, children, home }: { items: MenuItem[]; notice: string; children: React.ReactNode; home?: boolean }) {
+  const pathHome = usePathname() === "/";
+  const isHome = home ?? pathHome;
   return (
-    <div className={home ? "store-main is-home" : "store-main"}>
-      {home ? <HomeGarden /> : null}
+    <div className={isHome ? "store-main is-home" : "store-main"} data-editor-id="frame">
+      {isHome ? <HomeGarden /> : null}
       <Header items={items} />
-      {notice ? <p className="notice">{notice}</p> : null}
-      <main>{children}</main>
+      {notice ? <p className="notice" data-editor-id="frame.notice">{notice}</p> : null}
+      <main data-editor-id="frame.main">{children}</main>
       <Footer />
     </div>
   );

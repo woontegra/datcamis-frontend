@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { editorMenuId } from "@/lib/editor-catalog";
 import type { MenuItem } from "@/lib/types";
 import { useCart } from "./cart-context";
 
@@ -16,51 +17,51 @@ export function Header({ items }: { items: MenuItem[] }) {
   const { count } = useCart();
   const path = usePathname();
   return (
-    <header className={`site-header ${open ? "is-open" : ""}`}>
+    <header className={`site-header ${open ? "is-open" : ""}`} data-editor-id="frame.header">
       <div className="wrap header-bar">
-        <Link href="/" className="brand-lockup" onClick={() => setOpen(false)}>
-          <img src="/home/logo-mark.jpg" alt="" width={48} height={48} />
+        <Link href="/" className="brand-lockup" data-editor-id="frame.header.brand" onClick={() => setOpen(false)}>
+          <img src="/home/logo-mark.jpg" alt="" width={48} height={48} data-editor-id="frame.header.brand.mark" />
           <span>
-            <strong className="brand-name">DATÇAMİS</strong>
-            <small className="brand-tag">Datça’dan Teninize Doğadan Ruhunuza</small>
+            <strong className="brand-name" data-editor-id="frame.header.brand.name">DATÇAMİS</strong>
+            <small className="brand-tag" data-editor-id="frame.header.brand.tag">Datça’dan Teninize Doğadan Ruhunuza</small>
           </span>
         </Link>
-        <nav className="desktop-nav" aria-label="Ana menü">
+        <nav className="desktop-nav" aria-label="Ana menü" data-editor-id="frame.header.nav">
           {items.map((item) => (
-            <Link key={item.href} href={item.href} aria-current={isCurrent(item.href, path) ? "page" : undefined}>
+            <Link key={item.href} href={item.href} data-editor-id={editorMenuId("frame.header.nav", item.href)} aria-current={isCurrent(item.href, path) ? "page" : undefined}>
               {item.label}
             </Link>
           ))}
         </nav>
-        <div className="header-tools">
-          <Link className="icon-btn tool-extra" href="/arama" aria-label="Arama">
+        <div className="header-tools" data-editor-id="frame.header.tools">
+          <Link className="icon-btn tool-extra" href="/arama" aria-label="Arama" data-editor-id="frame.header.tools.search">
             <IconSearch />
           </Link>
-          <Link className="icon-btn tool-extra" href="/hesap" aria-label="Hesap">
+          <Link className="icon-btn tool-extra" href="/hesap" aria-label="Hesap" data-editor-id="frame.header.tools.account">
             <IconUser />
           </Link>
-          <Link className="icon-btn tool-extra" href="/favoriler" aria-label="Favoriler">
+          <Link className="icon-btn tool-extra" href="/favoriler" aria-label="Favoriler" data-editor-id="frame.header.tools.favorites">
             <IconHeart />
           </Link>
-          <Link className="icon-btn" href="/sepet" aria-label={`Sepet, ${count} ürün`}>
+          <Link className="icon-btn" href="/sepet" aria-label={`Sepet, ${count} ürün`} data-editor-id="frame.header.tools.cart">
             <IconBag />
             {count > 0 ? <span className="count-dot">{count}</span> : null}
           </Link>
-          <button className="icon-btn menu-toggle" type="button" aria-expanded={open} aria-label="Menü" onClick={() => setOpen((value) => !value)}>
+          <button className="icon-btn menu-toggle" type="button" aria-expanded={open} aria-label="Menü" data-editor-id="frame.header.tools.menu" onClick={() => setOpen((value) => !value)}>
             <IconMenu />
           </button>
         </div>
       </div>
       {open ? (
-        <div className="wrap mobile-drawer">
+        <div className="wrap mobile-drawer" data-editor-id="frame.header.drawer">
           {items.map((item) => (
-            <Link key={item.href} href={item.href} aria-current={isCurrent(item.href, path) ? "page" : undefined} onClick={() => setOpen(false)}>
+            <Link key={item.href} href={item.href} data-editor-id={editorMenuId("frame.header.drawer", item.href)} aria-current={isCurrent(item.href, path) ? "page" : undefined} onClick={() => setOpen(false)}>
               {item.label}
             </Link>
           ))}
-          <Link href="/arama" onClick={() => setOpen(false)}>Arama</Link>
-          <Link href="/hesap" onClick={() => setOpen(false)}>Hesap</Link>
-          <Link href="/favoriler" onClick={() => setOpen(false)}>Favoriler</Link>
+          <Link href="/arama" data-editor-id="frame.header.drawer.arama" onClick={() => setOpen(false)}>Arama</Link>
+          <Link href="/hesap" data-editor-id="frame.header.drawer.hesap" onClick={() => setOpen(false)}>Hesap</Link>
+          <Link href="/favoriler" data-editor-id="frame.header.drawer.favoriler" onClick={() => setOpen(false)}>Favoriler</Link>
         </div>
       ) : null}
     </header>

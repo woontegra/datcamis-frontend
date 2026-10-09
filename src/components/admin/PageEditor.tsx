@@ -12,6 +12,7 @@ export function PageEditor({ page }: { page: EditorPage }) {
   const router = useRouter();
   const latest = page.revisions[0];
   const [document, setDocument] = useState<PageDocument>(latest?.document || { version: 1, sections: [] });
+  const [baseVersion, setBaseVersion] = useState(latest?.version ?? 0);
   const [selected, setSelected] = useState(document.sections[0]?.blocks[0]?.id || "");
   const [message, setMessage] = useState("");
 
@@ -26,11 +27,17 @@ export function PageEditor({ page }: { page: EditorPage }) {
   }
 
   const block = document.sections.flatMap((section) => section.blocks).find((item) => item.id === selected);
+  const homeDraft = page.slug === "ana-sayfa";
 
   async function save(publish: boolean) {
+    if (publish && homeDraft) {
+      setMessage("Mağaza ana sayfasına yayınlama henüz desteklenmiyor.");
+      return;
+    }
     setMessage("");
     try {
-      await browserApi(`/admin/pages/${page.id}/revisions`, { method: "POST", body: JSON.stringify({ document }) });
+      const saved = await browserApi<{ data: { version: number } }>(`/admin/pages/${page.id}/revisions`, { method: "POST", body: JSON.stringify({ document, baseVersion }) });
+      setBaseVersion(saved.data.version);
       if (publish) await browserApi(`/admin/pages/${page.id}/publish`, { method: "POST" });
       setMessage(publish ? "Yayınlandı." : "Taslak kaydedildi.");
       router.refresh();
@@ -43,6 +50,7 @@ export function PageEditor({ page }: { page: EditorPage }) {
     <div className="split">
       <section className="panel-admin">
         <p style={{ marginTop: 0 }}>{page.title} · {page.status} · v{latest?.version || 0}</p>
+        {homeDraft ? <p>Mağaza ana sayfasına yayınlama henüz desteklenmiyor. Bu kayıt görsel editör taslağıdır.</p> : null}
         {document.sections.map((section) => (
           <div key={section.id}>
             {section.blocks.map((item) => (
@@ -54,7 +62,7 @@ export function PageEditor({ page }: { page: EditorPage }) {
         ))}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.8rem" }}>
           <button className="text-btn" type="button" onClick={() => save(false)}>Taslak kaydet</button>
-          <button className="green-btn" type="button" onClick={() => save(true)}>Yayınla</button>
+          <button className="green-btn" type="button" onClick={() => save(true)} disabled={homeDraft}>Yayınla</button>
         </div>
         {message ? <p>{message}</p> : null}
       </section>

@@ -22,24 +22,25 @@ export function HomeProductCard({ product }: { product: HomeProduct }) {
   const [note, setNote] = useState("");
 
   return (
-    <article className="home-product">
+    <article className="home-product" data-editor-id={`home.products.card.${product.slug}`}>
       <div className="home-product-visual">
         <Link href={`/urunler/${product.slug}`}>
-          <img src={product.image} alt={product.name} />
+          <img src={product.image} alt={product.name} data-editor-id={`home.products.card.${product.slug}.photo`} />
         </Link>
-        <span className="home-badge">Yeni</span>
-        <FavoriteButton slug={product.slug} appearance="icon" />
+        <span className="home-badge" data-editor-id={`home.products.card.${product.slug}.badge`}>Yeni</span>
+        <FavoriteButton slug={product.slug} appearance="icon" editorId={`home.products.card.${product.slug}.favorite`} />
       </div>
-      <div className="body">
-        <h3>
+      <div className="body" data-editor-id={`home.products.card.${product.slug}.body`}>
+        <h3 data-editor-id={`home.products.card.${product.slug}.name`}>
           <Link href={`/urunler/${product.slug}`}>{product.name}</Link>
         </h3>
-        {product.variantLabel ? <p className="meta">{product.variantLabel}</p> : null}
-        <p className="home-price">
+        {product.variantLabel ? <p className="meta" data-editor-id={`home.products.card.${product.slug}.variant`}>{product.variantLabel}</p> : null}
+        <p className="home-price" data-editor-id={`home.products.card.${product.slug}.price`}>
           {product.priceAmount != null ? formatTry(product.priceAmount) : "Fiyat yok"}
           {product.seed ? <small>Test fiyatı</small> : null}
         </p>
         <button
+          data-editor-id={`home.products.card.${product.slug}.cart`}
           className="home-cart"
           type="button"
           disabled={!product.variantId || pending}
