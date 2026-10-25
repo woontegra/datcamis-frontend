@@ -31,11 +31,12 @@ import {
 } from "@/lib/editor-boxes";
 import { browserApi } from "@/lib/api";
 import { MediaUploader } from "@/components/admin/MediaUploader";
-import type { UploadInfo } from "@/lib/media-upload";
+import type { UploadInfo, UploadUsage } from "@/lib/media-upload";
 import {
   clampImageNumber,
   IMAGE_MIME_TYPES,
   imageTarget,
+  imageUsageFor,
   isMediaId,
   mediaUrl,
   readFocus,
@@ -286,7 +287,7 @@ function loadMedia() {
   return mediaCache;
 }
 
-function MediaPicker({ selected, onPick }: { selected: string | undefined; onPick: (id: string) => void }) {
+function MediaPicker({ selected, onPick, usage }: { selected: string | undefined; onPick: (id: string) => void; usage?: UploadUsage }) {
   const [library, setLibrary] = useState<MediaLibrary | null>(null);
   const [failed, setFailed] = useState(false);
   const [fresh, setFresh] = useState<string[]>([]);
@@ -318,7 +319,7 @@ function MediaPicker({ selected, onPick }: { selected: string | undefined; onPic
   const items = library?.items;
   return (
     <div className="visual-editor-library">
-      <MediaUploader compact info={library?.upload} onUploaded={added} />
+      <MediaUploader compact info={library?.upload} onUploaded={added} usage={usage} />
       {failed ? (
         <p className="visual-editor-note">Medya Kütüphanesi yüklenemedi.</p>
       ) : !items ? (
@@ -398,6 +399,7 @@ export function ImageSettings({
         {picking ? (
           <MediaPicker
             selected={patch?.mediaId}
+            usage={imageUsageFor(element.dataset.editorId ?? "")}
             onPick={(mediaId) => {
               onChange({ mediaId });
               setPicking(false);

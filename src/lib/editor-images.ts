@@ -1,4 +1,5 @@
 import { cleanDeviceOverrides, resolveForDevice, type DeviceOverrides, type EditorDevice } from "@/lib/editor-devices";
+import type { UploadUsage } from "@/lib/media-upload";
 
 export type ImageKind = "photo" | "cover" | "mark";
 export type ImageFit = "cover" | "contain";
@@ -22,11 +23,28 @@ export const IMAGE_DEVICE_KEYS = ["width", "height", "radius", "borderWidth", "b
 
 export type MediaItem = { id: string; filename: string; mimeType: string; alt: string | null; url: string };
 
+export type UploadedMedia = MediaItem & {
+  sizeBytes?: number;
+  optimization?: { originalBytes: number; outputBytes: number; outputFormat: string; savingsPercent: number };
+};
+
 const IMAGE_KINDS: [RegExp, ImageKind][] = [
   [/^home\.hero\.photo$/, "photo"],
   [/^home\.(?:collections\.card\.[a-z0-9-]+\.photo|story\.photo|promos\.card\.[a-z0-9-]+\.photo)$/, "cover"],
   [/^frame\.(?:header\.brand\.mark|footer\.brand\.mark|garden\.(?:desktop|mobile))$/, "mark"],
 ];
+
+// Only slots whose role is certain; cards, box backgrounds and free images leave the choice to the editor.
+const IMAGE_USAGES: [RegExp, UploadUsage][] = [
+  [/^home\.hero\.photo$/, "hero"],
+  [/^frame\.(?:header|footer)\.brand\.mark$/, "logo"],
+  [/^frame\.garden\.(?:desktop|mobile)$/, "decorative"],
+];
+
+export function imageUsageFor(id: string): UploadUsage | undefined {
+  for (const [pattern, usage] of IMAGE_USAGES) if (pattern.test(id)) return usage;
+  return undefined;
+}
 
 export const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 const MEDIA_ID = /^[a-z0-9]{20,40}$/;
