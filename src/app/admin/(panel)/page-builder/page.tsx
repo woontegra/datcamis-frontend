@@ -12,7 +12,7 @@ export default async function PageBuilderIndex() {
         {body.data.map((page) => (
           <p key={page.id}>
             <Link href={`/admin/sayfalar/${page.id}`}>{page.title}</Link> · {page.status}
-            {page.slug === "ana-sayfa" ? " · Mağaza ana sayfasına yayınlama henüz desteklenmiyor." : ""}
+            {page.slug === "ana-sayfa" ? " · Görsel editör taslağı; Yayınla canlı ana sayfayı günceller." : ""}
           </p>
         ))}
       </section>

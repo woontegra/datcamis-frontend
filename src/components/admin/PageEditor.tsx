@@ -30,10 +30,6 @@ export function PageEditor({ page }: { page: EditorPage }) {
   const homeDraft = page.slug === "ana-sayfa";
 
   async function save(publish: boolean) {
-    if (publish && homeDraft) {
-      setMessage("Mağaza ana sayfasına yayınlama henüz desteklenmiyor.");
-      return;
-    }
     setMessage("");
     try {
       const saved = await browserApi<{ data: { version: number } }>(`/admin/pages/${page.id}/revisions`, { method: "POST", body: JSON.stringify({ document, baseVersion }) });
@@ -50,7 +46,7 @@ export function PageEditor({ page }: { page: EditorPage }) {
     <div className="split">
       <section className="panel-admin">
         <p style={{ marginTop: 0 }}>{page.title} · {page.status} · v{latest?.version || 0}</p>
-        {homeDraft ? <p>Mağaza ana sayfasına yayınlama henüz desteklenmiyor. Bu kayıt görsel editör taslağıdır.</p> : null}
+        {homeDraft ? <p>Bu kayıt görsel editör taslağıdır. Yayınla, kaydedilmiş son taslağı canlı ana sayfada gösterir.</p> : null}
         {document.sections.map((section) => (
           <div key={section.id}>
             {section.blocks.map((item) => (
@@ -62,7 +58,7 @@ export function PageEditor({ page }: { page: EditorPage }) {
         ))}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.8rem" }}>
           <button className="text-btn" type="button" onClick={() => save(false)}>Taslak kaydet</button>
-          <button className="green-btn" type="button" onClick={() => save(true)} disabled={homeDraft}>Yayınla</button>
+          <button className="green-btn" type="button" onClick={() => save(true)}>Yayınla</button>
         </div>
         {message ? <p>{message}</p> : null}
       </section>

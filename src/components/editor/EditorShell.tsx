@@ -66,6 +66,7 @@ type CopyValues = { text?: string } & EditorTextStyle;
 type LinkValues = { text?: string; href?: string } & EditorLinkStyle;
 type Handle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 type StoredRevision = { id: string; version: number; document: unknown };
+type StoredPage = { id?: string; slug?: string; publishedRevisionId?: string | null; revisions?: StoredRevision[] };
 type History = { past: EditorDraft[]; future: EditorDraft[]; previous: EditorDraft | null; restoring: EditorDraft | null; at: number; force: boolean; gesture: boolean };
 
 const HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
@@ -201,12 +202,28 @@ function editorTarget() {
 }
 
 async function readHomePage(id: string, slug: string) {
-  const body = await browserApi<{ data?: { id?: string; slug?: string; revisions?: StoredRevision[] } }>(`/admin/pages/${encodeURIComponent(id)}`);
+  const body = await browserApi<{ data?: StoredPage }>(`/admin/pages/${encodeURIComponent(id)}`);
   const page = body?.data;
   if (!page || page.id !== id || page.slug !== slug || !Array.isArray(page.revisions)) {
     throw new UnverifiedSave("Sunucudan beklenmeyen yanıt geldi.");
   }
-  return { id, latest: page.revisions[0] as StoredRevision | undefined };
+  return {
+    id,
+    latest: page.revisions[0] as StoredRevision | undefined,
+    publishedRevisionId: page.publishedRevisionId ?? null,
+  };
+}
+
+function publishErrorText(error: unknown) {
+  if (error instanceof ApiError) {
+    if (error.status === 401) return "Oturumun süresi dolmuş; yayınlanmadı. Yeni sekmede yeniden giriş yapıp tekrar deneyin.";
+    if (error.status === 403) return "Bu taslağı yayınlama yetkiniz yok.";
+    if (error.status === 404) return "Taslak sunucuda bulunamadı; yayınlanmadı.";
+    if (error.status === 400) return `Yayınlanmadı: ${error.message}`;
+    return `Sunucu hatası (${error.status}); yayınlanmadı.`;
+  }
+  if (error instanceof UnverifiedSave) return error.message;
+  return "Sunucuya ulaşılamadı; yayınlanmadı.";
 }
 
 function loadErrorText(error: unknown) {
@@ -298,6 +315,9 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
   const [baseVersion, setBaseVersion] = useState(0);
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishedRevisionId, setPublishedRevisionId] = useState<string | null>(null);
+  const [latestRevisionId, setLatestRevisionId] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ tone: "info" | "ok" | "error"; text: string }>({ tone: "info", text: "Taslak yükleniyor…" });
   const [savedSignature, setSavedSignature] = useState(() => editorSignature(emptyDraft()));
   const draft = useMemo<EditorDraft>(() => ({ copies, nodes, links, images, boxes }), [copies, nodes, links, images, boxes]);
@@ -541,11 +561,13 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
           setReady(true);
           return;
         }
-        const { latest } = await readHomePage(found.id, slug);
+        const { latest, publishedRevisionId: liveId } = await readHomePage(found.id, slug);
         const draft = readHomeEditor(latest?.document);
         if (cancel) return;
         setPageId(found.id);
         setBaseVersion(latest?.version ?? 0);
+        setPublishedRevisionId(liveId);
+        setLatestRevisionId(latest?.id ?? null);
         resetHistory();
         setCopies(draft.copies);
         setNodes(draft.nodes);
@@ -553,7 +575,13 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
         setImages(draft.images);
         setBoxes(draft.boxes);
         setSavedSignature(editorSignature(draft));
-        setBanner({ tone: "info", text: `Kayıtlı taslak yüklendi (sürüm ${latest?.version ?? 0}). Yayında değil.` });
+        const live = liveId && latest?.id === liveId;
+        setBanner({
+          tone: "info",
+          text: live
+            ? `Kayıtlı taslak yüklendi (sürüm ${latest?.version ?? 0}). Yayında.`
+            : `Kayıtlı taslak yüklendi (sürüm ${latest?.version ?? 0}). Canlıda görünmez.`,
+        });
         setReady(true);
       } catch (error) {
         if (cancel) return;
@@ -565,7 +593,16 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const status = ready && !saving && dirty && banner.tone !== "error" ? { tone: "info" as const, text: "Kaydedilmemiş değişiklik var." } : banner;
+  const status = ready && !saving && !publishing && dirty && banner.tone !== "error" ? { tone: "info" as const, text: "Kaydedilmemiş değişiklik var." } : banner;
+  const liveNow = Boolean(publishedRevisionId && latestRevisionId === publishedRevisionId && !dirty);
+  const liveLabel =
+    target !== HOME_EDITOR_SLUG
+      ? "Deneme taslağı · yayında değil"
+      : liveNow
+        ? "Yayında"
+        : publishedRevisionId
+          ? "Taslak · canlıdan farklı"
+          : "Yayında değil";
 
   useEffect(() => {
     if (!dirty) return;
@@ -893,8 +930,8 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
     });
   }
 
-  async function saveDraft() {
-    if (!ready || saving || !dirty) return;
+  async function saveDraft(): Promise<string | null> {
+    if (!ready || saving || publishing || !dirty) return null;
     const document = homeEditorDocument(draft);
     const mark = editorSignature(draft);
     setSaving(true);
@@ -922,21 +959,61 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
         revisionId = saved.data.id;
         setBaseVersion(saved.data.version);
       }
-      const { latest } = await readHomePage(id, target);
+      const page = await readHomePage(id, target);
+      const { latest } = page;
       if (!latest || (revisionId && latest.id !== revisionId) || !sameEditorDraft(readHomeEditor(latest.document), readHomeEditor(document))) {
         throw new UnverifiedSave("Kaydedilen taslak sunucuda okunamadı.");
       }
       setBaseVersion(latest.version);
+      setLatestRevisionId(latest.id);
+      setPublishedRevisionId(page.publishedRevisionId);
       setSavedSignature(mark);
-      setBanner({ tone: "ok", text: `Taslak kaydedildi (sürüm ${latest.version}). Yayında değil.` });
+      const live = page.publishedRevisionId === latest.id;
+      setBanner({
+        tone: "ok",
+        text: live ? `Taslak kaydedildi (sürüm ${latest.version}). Yayında.` : `Taslak kaydedildi (sürüm ${latest.version}). Canlıda görünmez.`,
+      });
+      return id;
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         setPageId(null);
         setBaseVersion(0);
       }
       setBanner({ tone: "error", text: saveErrorText(error) });
+      return null;
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function publishHome() {
+    if (target !== HOME_EDITOR_SLUG || !ready || saving || publishing) return;
+    let id = pageId;
+    if (dirty) {
+      const savedId = await saveDraft();
+      if (!savedId) return;
+      id = savedId;
+    }
+    if (!id) {
+      setBanner({ tone: "error", text: "Yayınlamak için önce taslağı kaydedin." });
+      return;
+    }
+    setPublishing(true);
+    setBanner({ tone: "info", text: "Yayınlanıyor…" });
+    try {
+      await browserApi(`/admin/pages/${encodeURIComponent(id)}/publish`, { method: "POST" });
+      const page = await readHomePage(id, target);
+      if (!page.latest || !page.publishedRevisionId || page.publishedRevisionId !== page.latest.id) {
+        throw new UnverifiedSave("Yayın sunucuda doğrulanamadı.");
+      }
+      setLatestRevisionId(page.latest.id);
+      setPublishedRevisionId(page.publishedRevisionId);
+      setBaseVersion(page.latest.version);
+      setBanner({ tone: "ok", text: `Yayınlandı (sürüm ${page.latest.version}). Canlı ana sayfada görünür.` });
+    } catch (error) {
+      setBanner({ tone: "error", text: publishErrorText(error) });
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -1126,12 +1203,12 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
     <div className="visual-editor">
       <header className="visual-editor-bar">
         <strong>Ana sayfa</strong>
-        <span className="visual-editor-temporary">{target === HOME_EDITOR_SLUG ? "Yayında değil" : "Deneme taslağı · yayında değil"}</span>
+        <span className="visual-editor-temporary">{liveLabel}</span>
         <span
           className={status.tone === "error" ? "visual-editor-status is-error" : status.tone === "ok" ? "visual-editor-status is-ok" : "visual-editor-status"}
           role="status"
         >
-          {saving ? "Kaydediliyor…" : status.text}
+          {publishing ? "Yayınlanıyor…" : saving ? "Kaydediliyor…" : status.text}
         </span>
         <div className="visual-editor-devices" role="group" aria-label="Önizleme cihazı">
           {PREVIEW_DEVICES.map((item) => (
@@ -1161,12 +1238,23 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           className={dirty ? "visual-editor-save is-dirty" : "visual-editor-save"}
-          onClick={saveDraft}
-          disabled={!ready || saving || !dirty}
+          onClick={() => void saveDraft()}
+          disabled={!ready || saving || publishing || !dirty}
           title={dirty ? "Değişiklikleri taslağa kaydet" : "Kaydedilecek değişiklik yok"}
         >
           {saving ? "Kaydediliyor…" : "Taslak Kaydet"}
         </button>
+        {target === HOME_EDITOR_SLUG ? (
+          <button
+            type="button"
+            className="visual-editor-publish"
+            onClick={() => void publishHome()}
+            disabled={!ready || saving || publishing || (!pageId && !dirty)}
+            title="Kaydedilmiş taslağı canlı ana sayfada göster"
+          >
+            {publishing ? "Yayınlanıyor…" : "Yayınla"}
+          </button>
+        ) : null}
         <Link
           href="/admin/page-builder"
           onClick={(event) => {
@@ -1242,7 +1330,7 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
           <>
             <p className="visual-editor-kicker">{parent ? `Serbest öğe · ${parent.name}` : "Serbest öğe"}</p>
             <h2>{info?.name}</h2>
-            <p className="visual-editor-note">Üstteki Taslak Kaydet ile saklanır; yayındaki mağazada görünmez.</p>
+            <p className="visual-editor-note">Üstteki Taslak Kaydet ile saklanır; Yayınla ile canlı ana sayfada görünür.</p>
             <NodeSettings
               key={selected}
               node={nodePanelView(selectedNode)}
@@ -1277,7 +1365,7 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
           <>
             <p className="visual-editor-kicker">{parent ? `Metin · ${parent.name}` : "Metin"}</p>
             <h2>{info.name}</h2>
-            <p className="visual-editor-note">Üstteki Taslak Kaydet ile saklanır.</p>
+            <p className="visual-editor-note">Üstteki Taslak Kaydet ile saklanır; Yayınla ile canlı ana sayfada görünür.</p>
             <TextSettings
               key={selected}
               element={copyElement}
@@ -1302,7 +1390,7 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
           <>
             <p className="visual-editor-kicker">Görsel</p>
             <h2>{info.name}</h2>
-            <p className="visual-editor-note">Üstteki Taslak Kaydet ile saklanır.</p>
+            <p className="visual-editor-note">Üstteki Taslak Kaydet ile saklanır; Yayınla ile canlı ana sayfada görünür.</p>
             <ImageSettings
               key={selected}
               element={imageElement}
@@ -1328,7 +1416,7 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
           <>
             <p className="visual-editor-kicker">{selectedBoxKind === "section" ? "Bölüm" : selectedBoxKind === "container" ? "Konteyner" : "Kart"}</p>
             <h2>{info.name}</h2>
-            <p className="visual-editor-note">Üstteki Taslak Kaydet ile saklanır.</p>
+            <p className="visual-editor-note">Üstteki Taslak Kaydet ile saklanır; Yayınla ile canlı ana sayfada görünür.</p>
             <BoxSettings
               key={selected}
               element={boxElement}
@@ -1362,7 +1450,7 @@ export function EditorShell({ children }: { children: React.ReactNode }) {
           <>
             <p className="visual-editor-kicker">{selectedLinkKind === "button" ? "Buton" : selectedLinkKind === "card" ? "Kart bağlantısı" : "Bağlantı"}</p>
             <h2>{info.name}</h2>
-            <p className="visual-editor-note">Üstteki Taslak Kaydet ile saklanır. Editörde bağlantılar açılmaz.</p>
+            <p className="visual-editor-note">Üstteki Taslak Kaydet ile saklanır; Yayınla ile canlı ana sayfada görünür. Editörde bağlantılar açılmaz.</p>
             <LinkSettings
               key={selected}
               element={linkElement}

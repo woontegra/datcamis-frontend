@@ -10,7 +10,7 @@ export default async function PagesAdmin() {
         {body.data.map((page) => (
           <p key={page.id}>
             <Link href={`/admin/sayfalar/${page.id}`}>{page.title}</Link> · {page.status} · v{page.latestVersion}
-            {page.slug === "ana-sayfa" ? " · Mağaza ana sayfasına yayınlama henüz desteklenmiyor." : ""}
+            {page.slug === "ana-sayfa" ? " · Görsel editör taslağı; Yayınla canlı ana sayfayı günceller." : ""}
           </p>
         ))}
         {body.data.length === 0 ? <p>Sayfa yok.</p> : null}

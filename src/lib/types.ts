@@ -60,7 +60,7 @@ export type PageSection = {
   blocks: PageBlock[];
 };
 
-export type PageDocument = { version: 1; sections: PageSection[] };
+export type PageDocument = { version: 1 | 2; sections: PageSection[]; editor?: unknown };
 
 export type Dashboard = {
   revenueAmount: number;

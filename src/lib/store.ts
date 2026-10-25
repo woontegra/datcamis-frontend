@@ -1,4 +1,5 @@
 import { ApiError, serverApi } from "./api";
+import { emptyDraft, HOME_EDITOR_SLUG, readHomeEditor, sameEditorDraft, type EditorDraft } from "./editor-elements";
 import type { Category, Collection, MenuItem, PageDocument, PostCard, Product, SeoMeta } from "./types";
 
 const fallbackMenu: MenuItem[] = [
@@ -80,4 +81,16 @@ export async function orNotFound<T>(loader: () => Promise<T>): Promise<T | null>
 export async function getPage(slug: string) {
   const body = await serverApi<{ data: { slug: string; title: string; document: PageDocument; seo?: SeoMeta | null } }>(`/content/pages/${slug}`);
   return body.data;
+}
+
+/** Live homepage overlay. Unpublished or empty editor documents leave the hardcoded storefront as-is. */
+export async function getPublishedHome(): Promise<EditorDraft | null> {
+  try {
+    const page = await getPage(HOME_EDITOR_SLUG);
+    const draft = readHomeEditor(page.document);
+    if (sameEditorDraft(draft, emptyDraft())) return null;
+    return draft;
+  } catch {
+    return null;
+  }
 }

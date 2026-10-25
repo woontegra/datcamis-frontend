@@ -141,11 +141,24 @@ div.visual-editor-device-note .visual-editor-reset {
   box-shadow: 0 0 0 3px rgb(30 74 56 / 18%);
 }
 
-.visual-editor-save:disabled {
+.visual-editor-save:disabled,
+.visual-editor-publish:disabled {
   border-color: #b9c4bc;
   background: #e8ece7;
   color: #5c6b61;
   cursor: default;
+}
+
+.visual-editor-publish {
+  flex-shrink: 0;
+  border: 1px solid #8d7344;
+  border-radius: 999px;
+  background: #8d7344;
+  color: #fffdf8;
+  padding: 0.38rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .visual-editor-status {

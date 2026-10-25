@@ -1,14 +1,14 @@
 import { CartProvider } from "@/components/store/cart-context";
 import { StoreFrame } from "@/components/store/StoreFrame";
-import { getMenu, getSettings } from "@/lib/store";
+import { getMenu, getPublishedHome, getSettings } from "@/lib/store";
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
-  const [items, settings] = await Promise.all([getMenu(), getSettings()]);
+  const [items, settings, published] = await Promise.all([getMenu(), getSettings(), getPublishedHome()]);
   const notice = typeof settings.pricingNotice === "string" ? settings.pricingNotice : "";
   return (
     <CartProvider>
       <div className="store-shell">
-        <StoreFrame items={items} notice={notice}>
+        <StoreFrame items={items} notice={notice} published={published}>
           {children}
         </StoreFrame>
       </div>
