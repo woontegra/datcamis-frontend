@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { browserApi } from "@/lib/api";
+import { ApiError, browserApi } from "@/lib/api";
 
 export type CartItem = {
   id: string;
@@ -32,6 +32,7 @@ const CartContext = createContext<{
 } | null>(null);
 
 const KEY = "dm_cart_token";
+export const ADD_FAILED = "Ürün sepete eklenemedi, lütfen tekrar deneyin.";
 
 async function token() {
   const existing = localStorage.getItem(KEY);
@@ -50,8 +51,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setCart(null);
       return;
     }
-    const body = await browserApi<{ data: CartData }>("/carts/current", { cache: "no-store", headers: { "x-cart-token": current } });
-    setCart(body.data);
+    try {
+      const body = await browserApi<{ data: CartData }>("/carts/current", { cache: "no-store", headers: { "x-cart-token": current } });
+      setCart(body.data);
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 404)) throw error;
+      localStorage.removeItem(KEY);
+      setCart(null);
+    }
   }
 
   useEffect(() => {
@@ -62,7 +69,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       .then((body) => {
         if (!cancelled) setCart(body.data);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 404) localStorage.removeItem(KEY);
+        else console.error("[cart] sepet yüklenemedi", error);
         if (!cancelled) setCart(null);
       });
     return () => {
@@ -70,14 +79,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  async function add(variantId: string, quantity = 1) {
-    const current = await token();
-    const body = await browserApi<{ data: CartData }>("/carts/current/items", {
+  async function postItem(current: string, variantId: string, quantity: number) {
+    return browserApi<{ data: CartData }>("/carts/current/items", {
       method: "POST",
       headers: { "x-cart-token": current },
       body: JSON.stringify({ variantId, quantity }),
     });
-    setCart(body.data);
+  }
+
+  async function cartExists(current: string) {
+    try {
+      await browserApi("/carts/current", { cache: "no-store", headers: { "x-cart-token": current } });
+      return true;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return false;
+      throw error;
+    }
+  }
+
+  async function add(variantId: string, quantity = 1) {
+    const current = await token();
+    try {
+      setCart((await postItem(current, variantId, quantity)).data);
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 404) || await cartExists(current)) throw error;
+      localStorage.removeItem(KEY);
+      setCart((await postItem(await token(), variantId, quantity)).data);
+    }
   }
 
   async function update(itemId: string, quantity: number) {

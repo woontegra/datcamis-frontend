@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useCart } from "./cart-context";
 import type { Variant } from "@/lib/types";
 import { Price } from "@/components/store/Price";
+import { customerMessage } from "@/lib/api";
+import { ADD_FAILED } from "./cart-context";
 
 export function BuyBox({ variants }: { variants: Variant[] }) {
   const { add } = useCart();
@@ -34,7 +36,7 @@ export function BuyBox({ variants }: { variants: Variant[] }) {
             await add(selected.id, 1);
             setMessage("Sepete eklendi.");
           } catch (error) {
-            setMessage(error instanceof Error ? error.message : "Eklenemedi.");
+            setMessage(customerMessage(error, ADD_FAILED));
           } finally {
             setPending(false);
           }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { browserApi } from "@/lib/api";
+import { browserApi, customerMessage } from "@/lib/api";
 
 export function NewsletterForm({ title = "Bahçeden haber", text = "Yeni notlar için e-posta bırakın. Bu kayıt geliştirme ortamındadır.", editorId }: { title?: string; text?: string; editorId?: string }) {
   const [message, setMessage] = useState("");
@@ -18,7 +18,7 @@ export function NewsletterForm({ title = "Bahçeden haber", text = "Yeni notlar 
           setMessage("Kayıt alındı.");
           event.currentTarget.reset();
         } catch (error) {
-          setMessage(error instanceof Error ? error.message : "Kayıt alınamadı.");
+          setMessage(customerMessage(error, "Kayıt alınamadı."));
         }
       }}
     >

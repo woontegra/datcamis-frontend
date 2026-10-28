@@ -1,19 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useCart } from "@/components/store/cart-context";
+import { customerMessage } from "@/lib/api";
 import { productPhotoSlot } from "@/lib/home-visual";
 import { formatTry } from "@/lib/money";
 
 export default function CartPage() {
   const { cart, update, remove } = useCart();
+  const [message, setMessage] = useState("");
   const empty = !cart || cart.items.length === 0;
+
+  function run(action: Promise<void>) {
+    setMessage("");
+    action.catch((error: unknown) => setMessage(customerMessage(error, "Sepet güncellenemedi, lütfen tekrar deneyin.")));
+  }
   const count = cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
   return (
     <div className="wrap section cart-page">
       <p className="eyebrow">Sepet</p>
       <h1>Sepetiniz {empty ? null : <span className="cart-count">{count} ürün</span>}</h1>
+      {message ? <p className="error" role="alert">{message}</p> : null}
       {empty ? (
         <div className="cart-empty">
           <p>Sepetiniz boş.</p>
@@ -31,13 +40,13 @@ export default function CartPage() {
                   <div className="cart-line-info">
                     <Link href={`/urunler/${item.productSlug}`}>{item.productName}</Link>
                     <p>{item.variantName}</p>
-                    <button className="cart-remove" type="button" onClick={() => void remove(item.id)}>Kaldır</button>
+                    <button className="cart-remove" type="button" onClick={() => run(remove(item.id))}>Kaldır</button>
                   </div>
                   <div className="cart-line-meta">
                     <div className="qty-stepper">
-                      <button type="button" aria-label="Azalt" disabled={item.quantity <= 1} onClick={() => void update(item.id, item.quantity - 1)}>-</button>
+                      <button type="button" aria-label="Azalt" disabled={item.quantity <= 1} onClick={() => run(update(item.id, item.quantity - 1))}>-</button>
                       <span>{item.quantity}</span>
-                      <button type="button" aria-label="Artır" disabled={item.quantity >= available} onClick={() => void update(item.id, item.quantity + 1)}>+</button>
+                      <button type="button" aria-label="Artır" disabled={item.quantity >= available} onClick={() => run(update(item.id, item.quantity + 1))}>+</button>
                     </div>
                     <strong>{formatTry(item.lineAmount)}</strong>
                   </div>

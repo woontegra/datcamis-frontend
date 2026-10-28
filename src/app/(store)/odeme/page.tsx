@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/store/cart-context";
-import { ApiError, browserApi } from "@/lib/api";
+import { useCustomer } from "@/components/store/customer-context";
+import { ApiError, browserApi, customerMessage } from "@/lib/api";
+import { addressLines, type SavedAddress } from "@/lib/account";
 import { productPhotoSlot } from "@/lib/home-visual";
 import { validateCheckoutForm, type InvoiceType } from "@/lib/invoice";
 import { formatTry } from "@/lib/money";
 import { PROVINCE_NAMES, districtsOf } from "@/lib/turkey-locations";
+import { AddressFields } from "@/components/store/AddressFields";
 import { PlaceSelect } from "@/components/store/PlaceSelect";
 
 type PaymentConfig = {
@@ -35,9 +39,25 @@ function FieldError({ message }: { message?: string }) {
   return <span className="field-error">{message || "\u00a0"}</span>;
 }
 
+function fromSaved(address: SavedAddress) {
+  return {
+    fullName: address.fullName,
+    phone: address.phone,
+    line1: [address.line1, address.line2].filter((part) => part && part.trim()).join(", "),
+    district: address.district,
+    city: address.city,
+    postalCode: address.postalCode,
+    country: "TR",
+  };
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, refresh } = useCart();
+  const { customer, ready: customerReady } = useCustomer();
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [addressChoice, setAddressChoice] = useState<string>("new");
+  const [saveAddress, setSaveAddress] = useState(false);
   const [config, setConfig] = useState<PaymentConfig | null>(null);
   const [message, setMessage] = useState("");
   const [iframeUrl, setIframeUrl] = useState("");
@@ -74,9 +94,47 @@ export default function CheckoutPage() {
       }));
   }, []);
 
-  function setShip<K extends keyof typeof emptyAddress>(key: K, value: string) {
-    setShipping((current) => ({ ...current, [key]: value }));
+  useEffect(() => {
+    if (!customerReady || !customer) return;
+    let cancelled = false;
+    browserApi<{ data: SavedAddress[] }>("/account/addresses", { cache: "no-store" })
+      .then((body) => body.data)
+      .catch(() => [] as SavedAddress[])
+      .then((list) => {
+        if (cancelled) return;
+        setEmail(customer.email);
+        setSavedAddresses(list);
+        const preferred = list.find((item) => item.isDefault) ?? list[0];
+        if (preferred) {
+          setAddressChoice(preferred.id);
+          setShipping(fromSaved(preferred));
+          return;
+        }
+        setShipping((current) => ({
+          ...current,
+          fullName: current.fullName.trim() || `${customer.firstName} ${customer.lastName}`.trim(),
+          phone: current.phone.trim() || customer.phone,
+        }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customer, customerReady]);
+
+  function chooseAddress(choice: string) {
+    setAddressChoice(choice);
+    const saved = savedAddresses.find((item) => item.id === choice);
+    if (saved) setShipping(fromSaved(saved));
+    else setShipping({
+      ...emptyAddress,
+      fullName: customer ? `${customer.firstName} ${customer.lastName}`.trim() : "",
+      phone: customer?.phone ?? "",
+    });
   }
+
+  const usingSaved = addressChoice !== "new" && savedAddresses.some((item) => item.id === addressChoice);
+  const savedHasError = usingSaved && Object.keys(errors).some((key) => key.startsWith("shippingAddress."));
+
   function setBill<K extends keyof typeof emptyAddress>(key: K, value: string) {
     setBilling((current) => ({ ...current, [key]: value }));
   }
@@ -138,6 +196,7 @@ export default function CheckoutPage() {
           billingAddress: sameAsShipping ? undefined : billingToSend,
           paymentMethod,
           termsAccepted: true,
+          saveAddress: customer && !usingSaved ? saveAddress : undefined,
         }),
       });
       await refresh();
@@ -157,7 +216,7 @@ export default function CheckoutPage() {
         setErrors(Object.fromEntries(error.details.map((item) => [item.path, item.message])));
         setMessage(error.message);
       } else {
-        setMessage(error instanceof Error ? error.message : "Sipariş oluşmadı.");
+        setMessage(customerMessage(error, "Sipariş oluşmadı."));
       }
     }
   }
@@ -222,49 +281,65 @@ export default function CheckoutPage() {
 
               <section className="checkout-block">
                 <h2>1. İletişim ve teslimat</h2>
-                <div className="form-grid two">
-                  <label className="field span-2">Ad soyad
-                    <input name="fullName" autoComplete="name" value={shipping.fullName} onChange={(event) => setShip("fullName", event.target.value)} />
-                    <FieldError message={errors["shippingAddress.fullName"]} />
-                  </label>
-                  <label className="field">E-posta
-                    <input name="email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} />
-                    <FieldError message={errors.email} />
-                  </label>
-                  <label className="field">Telefon
-                    <input name="phone" type="tel" inputMode="tel" autoComplete="tel" value={shipping.phone} onChange={(event) => setShip("phone", event.target.value)} />
-                    <FieldError message={errors["shippingAddress.phone"]} />
-                  </label>
-                  <label className="field span-2">Adres
-                    <input name="line1" autoComplete="street-address" value={shipping.line1} onChange={(event) => setShip("line1", event.target.value)} />
-                    <FieldError message={errors["shippingAddress.line1"]} />
-                  </label>
-                  <PlaceSelect
-                    label="İl"
-                    value={shipping.city}
-                    options={PROVINCE_NAMES}
-                    placeholder="İl seçin"
-                    error={errors["shippingAddress.city"]}
-                    onChange={(city) => setShipping((current) => ({ ...current, city, district: city === current.city ? current.district : "" }))}
-                  />
-                  <PlaceSelect
-                    label="İlçe"
-                    value={shipping.district}
-                    options={districtsOf(shipping.city)}
-                    disabled={!shipping.city}
-                    placeholder={shipping.city ? "İlçe seçin" : "Önce il seçin"}
-                    error={errors["shippingAddress.district"]}
-                    onChange={(district) => setShip("district", district)}
-                  />
-                  <label className="field">Posta kodu
-                    <input inputMode="numeric" autoComplete="postal-code" value={shipping.postalCode} onChange={(event) => setShip("postalCode", event.target.value)} />
-                    <FieldError message={errors["shippingAddress.postalCode"]} />
-                  </label>
-                  <label className="field">TC kimlik no (isteğe bağlı)
-                    <input type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="off" maxLength={11} value={nationalId} onChange={(event) => setNationalId(event.target.value.replace(/\D/g, "").slice(0, 11))} />
-                    <FieldError message={errors["invoice.nationalId"]} />
-                  </label>
-                </div>
+                {customerReady && !customer ? (
+                  <p className="checkout-login-hint">
+                    Hesabınız var mı? <Link href="/giris?next=%2Fodeme">Giriş yapın</Link>; bilgileriniz otomatik dolsun.
+                  </p>
+                ) : null}
+                {customer && savedAddresses.length ? (
+                  <div className="saved-addresses" role="radiogroup" aria-label="Teslimat adresi">
+                    {savedAddresses.map((item) => (
+                      <label key={item.id} className={`pay-method ${addressChoice === item.id ? "is-on" : ""}`}>
+                        <input type="radio" name="savedAddress" checked={addressChoice === item.id} onChange={() => chooseAddress(item.id)} />
+                        <span>
+                          <strong>{item.fullName}{item.isDefault ? " · Varsayılan" : ""}</strong>
+                          <small>{addressLines(item).slice(1).join(" · ")}</small>
+                        </span>
+                      </label>
+                    ))}
+                    <label className={`pay-method ${addressChoice === "new" ? "is-on" : ""}`}>
+                      <input type="radio" name="savedAddress" checked={addressChoice === "new"} onChange={() => chooseAddress("new")} />
+                      <span><strong>Yeni adres</strong></span>
+                    </label>
+                  </div>
+                ) : null}
+                {usingSaved ? (
+                  <div className="form-grid two">
+                    <label className="field">E-posta
+                      <input name="email" type="email" value={email} readOnly />
+                      <FieldError message={errors.email} />
+                    </label>
+                    <label className="field">TC kimlik no (isteğe bağlı)
+                      <input type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="off" maxLength={11} value={nationalId} onChange={(event) => setNationalId(event.target.value.replace(/\D/g, "").slice(0, 11))} />
+                      <FieldError message={errors["invoice.nationalId"]} />
+                    </label>
+                    {savedHasError ? <p className="error span-2">Seçili adreste eksik bilgi var. Adreslerim sayfasından düzenleyin veya yeni adres girin.</p> : null}
+                  </div>
+                ) : (
+                  <AddressFields
+                    value={shipping}
+                    onChange={setShipping}
+                    errors={errors}
+                    errorPrefix="shippingAddress"
+                    afterName={(
+                      <label className="field">E-posta
+                        <input name="email" type="email" autoComplete="email" value={email} readOnly={Boolean(customer)} onChange={(event) => setEmail(event.target.value)} />
+                        <FieldError message={errors.email} />
+                      </label>
+                    )}
+                  >
+                    <label className="field">TC kimlik no (isteğe bağlı)
+                      <input type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="off" maxLength={11} value={nationalId} onChange={(event) => setNationalId(event.target.value.replace(/\D/g, "").slice(0, 11))} />
+                      <FieldError message={errors["invoice.nationalId"]} />
+                    </label>
+                    {customer ? (
+                      <label className="field-check span-2">
+                        <input type="checkbox" checked={saveAddress} onChange={(event) => setSaveAddress(event.target.checked)} />
+                        Bu adresi kaydet
+                      </label>
+                    ) : null}
+                  </AddressFields>
+                )}
               </section>
 
               <label className="field-check checkout-invoice-toggle">

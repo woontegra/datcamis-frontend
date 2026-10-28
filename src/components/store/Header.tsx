@@ -6,6 +6,7 @@ import { useState } from "react";
 import { editorMenuId } from "@/lib/editor-catalog";
 import type { MenuItem } from "@/lib/types";
 import { useCart } from "./cart-context";
+import { useCustomer } from "./customer-context";
 
 function isCurrent(href: string, path: string) {
   if (href === "/") return path === "/";
@@ -15,7 +16,10 @@ function isCurrent(href: string, path: string) {
 export function Header({ items }: { items: MenuItem[] }) {
   const [open, setOpen] = useState(false);
   const { count } = useCart();
+  const { customer, ready } = useCustomer();
   const path = usePathname();
+  const accountHref = !ready || customer ? "/hesap" : "/giris";
+  const accountLabel = !ready ? "Hesap" : customer ? "Hesabım" : "Giriş yap";
   return (
     <header className={`site-header ${open ? "is-open" : ""}`} data-editor-id="frame.header">
       <div className="wrap header-bar">
@@ -37,7 +41,7 @@ export function Header({ items }: { items: MenuItem[] }) {
           <Link className="icon-btn tool-extra" href="/arama" aria-label="Arama" data-editor-id="frame.header.tools.search">
             <IconSearch />
           </Link>
-          <Link className="icon-btn tool-extra" href="/hesap" aria-label="Hesap" data-editor-id="frame.header.tools.account">
+          <Link className="icon-btn tool-extra" href={accountHref} aria-label={accountLabel} aria-busy={!ready || undefined} data-editor-id="frame.header.tools.account">
             <IconUser />
           </Link>
           <Link className="icon-btn tool-extra" href="/favoriler" aria-label="Favoriler" data-editor-id="frame.header.tools.favorites">
@@ -60,7 +64,7 @@ export function Header({ items }: { items: MenuItem[] }) {
             </Link>
           ))}
           <Link href="/arama" data-editor-id="frame.header.drawer.arama" onClick={() => setOpen(false)}>Arama</Link>
-          <Link href="/hesap" data-editor-id="frame.header.drawer.hesap" onClick={() => setOpen(false)}>Hesap</Link>
+          <Link href={accountHref} data-editor-id="frame.header.drawer.hesap" onClick={() => setOpen(false)}>{accountLabel}</Link>
           <Link href="/favoriler" data-editor-id="frame.header.drawer.favoriler" onClick={() => setOpen(false)}>Favoriler</Link>
         </div>
       ) : null}

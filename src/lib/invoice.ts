@@ -34,6 +34,19 @@ export type CheckoutAddressInput = {
   country: string;
 };
 
+export function validateAddress(prefix: string, address: CheckoutAddressInput, errors: Record<string, string> = {}) {
+  const key = (field: string) => (prefix ? `${prefix}.${field}` : field);
+  if (address.fullName.trim().length < 3) errors[key("fullName")] = "Ad soyad en az 3 karakter olmalı.";
+  if (address.phone.trim().length < 10) errors[key("phone")] = "Telefon numarasını kontrol edin.";
+  if (address.line1.trim().length < 3) errors[key("line1")] = "Adres en az 3 karakter olmalı.";
+  if (!TURKEY_DISTRICTS[address.city.trim()]) errors[key("city")] = "Geçerli bir il seçin.";
+  else if (!isTurkeyCityDistrict(address.city.trim(), address.district.trim())) {
+    errors[key("district")] = "İlçe, seçilen ile ait değil.";
+  }
+  if (address.postalCode.trim().length < 4) errors[key("postalCode")] = "Posta kodunu kontrol edin.";
+  return errors;
+}
+
 export function validateCheckoutForm(options: {
   email: string;
   shipping: CheckoutAddressInput;
@@ -47,17 +60,7 @@ export function validateCheckoutForm(options: {
   if (!options.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(options.email.trim())) {
     errors.email = "Geçerli bir e-posta girin.";
   }
-  function address(prefix: string, address: CheckoutAddressInput) {
-    if (address.fullName.trim().length < 3) errors[`${prefix}.fullName`] = "Ad soyad en az 3 karakter olmalı.";
-    if (address.phone.trim().length < 10) errors[`${prefix}.phone`] = "Telefon numarasını kontrol edin.";
-    if (address.line1.trim().length < 3) errors[`${prefix}.line1`] = "Adres en az 3 karakter olmalı.";
-    if (!TURKEY_DISTRICTS[address.city.trim()]) errors[`${prefix}.city`] = "Geçerli bir il seçin.";
-    else if (!isTurkeyCityDistrict(address.city.trim(), address.district.trim())) {
-      errors[`${prefix}.district`] = "İlçe, seçilen ile ait değil.";
-    }
-    if (address.postalCode.trim().length < 4) errors[`${prefix}.postalCode`] = "Posta kodunu kontrol edin.";
-  }
-  address("shippingAddress", options.shipping);
+  validateAddress("shippingAddress", options.shipping, errors);
   const nationalId = options.invoice.nationalId.trim();
   if (nationalId && !isValidTckn(nationalId)) errors["invoice.nationalId"] = "TC kimlik numarası geçersiz.";
   if (!options.invoice.sameAsShipping) {
@@ -70,7 +73,7 @@ export function validateCheckoutForm(options: {
       if (!taxId) errors["invoice.taxId"] = "Vergi numarası girin.";
       else if (!/^\d{10}$/.test(taxId)) errors["invoice.taxId"] = "Vergi numarası 10 hane olmalı.";
     }
-    address("billingAddress", options.billing);
+    validateAddress("billingAddress", options.billing, errors);
   }
   if (!options.termsAccepted) errors.termsAccepted = "Sözleşmeleri onaylamanız gerekir.";
   if (!options.canCheckout) errors.paymentMethod = "Şu an tamamlanabilir bir ödeme yöntemi yok.";

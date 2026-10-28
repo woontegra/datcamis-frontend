@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { formatTry } from "@/lib/money";
-import { useCart } from "./cart-context";
+import { customerMessage } from "@/lib/api";
+import { ADD_FAILED, useCart } from "./cart-context";
 import { FavoriteButton } from "./FavoriteButton";
 
 export type HomeProduct = {
@@ -50,7 +51,7 @@ export function HomeProductCard({ product }: { product: HomeProduct }) {
             setNote("");
             add(product.variantId)
               .then(() => setNote("Sepete eklendi"))
-              .catch((error: unknown) => setNote(error instanceof Error ? error.message : "Eklenemedi"))
+              .catch((error: unknown) => setNote(customerMessage(error, ADD_FAILED)))
               .finally(() => setPending(false));
           }}
         >
