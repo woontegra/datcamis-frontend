@@ -17,9 +17,17 @@ export type CartItem = {
   image?: { url: string; alt: string } | null;
 };
 
-type CartData = {
+export type CartData = {
   items: CartItem[];
   subtotalAmount: number;
+  discountAmount?: number;
+  shippingAmount?: number;
+  totalAmount?: number;
+  freeShippingThreshold?: number | null;
+  freeShippingRemaining?: number | null;
+  minOrderAmount?: number | null;
+  minOrderShortfall?: number;
+  minOrderMessage?: string | null;
 };
 
 const CartContext = createContext<{

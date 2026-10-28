@@ -112,7 +112,7 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Kullanıcı Yönetimi", href: "/admin/kullanicilar", icon: "users", roles: MANAGE },
       { label: "Entegrasyonlar", href: "/admin/entegrasyonlar", icon: "integrations", roles: ALL },
       { label: "Bildirimler", href: "/admin/bildirimler", icon: "alerts", roles: ALL },
-      { label: "Ayarlar", href: "/admin/ayarlar", icon: "settings", roles: ALL },
+      { label: "Ayarlar", href: "/admin/ayarlar", icon: "settings", roles: MANAGE },
     ],
   },
 ];

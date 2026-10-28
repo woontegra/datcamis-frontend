@@ -6,7 +6,9 @@ import { useState } from "react";
 import { editorMenuId } from "@/lib/editor-catalog";
 import type { MenuItem } from "@/lib/types";
 import { useCart } from "./cart-context";
+import { MenuLink } from "./MenuLink";
 import { useCustomer } from "./customer-context";
+import { useBrand } from "./site-settings-context";
 
 function isCurrent(href: string, path: string) {
   if (href === "/") return path === "/";
@@ -15,8 +17,10 @@ function isCurrent(href: string, path: string) {
 
 export function Header({ items }: { items: MenuItem[] }) {
   const [open, setOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState<number | null>(null);
   const { count } = useCart();
   const { customer, ready } = useCustomer();
+  const brand = useBrand();
   const path = usePathname();
   const accountHref = !ready || customer ? "/hesap" : "/giris";
   const accountLabel = !ready ? "Hesap" : customer ? "Hesabım" : "Giriş yap";
@@ -24,18 +28,27 @@ export function Header({ items }: { items: MenuItem[] }) {
     <header className={`site-header ${open ? "is-open" : ""}`} data-editor-id="frame.header">
       <div className="wrap header-bar">
         <Link href="/" className="brand-lockup" data-editor-id="frame.header.brand" onClick={() => setOpen(false)}>
-          <img src="/home/logo-mark.jpg" alt="" width={48} height={48} data-editor-id="frame.header.brand.mark" />
+          <img src={brand.logo} alt="" width={48} height={48} data-editor-id="frame.header.brand.mark" />
           <span>
-            <strong className="brand-name" data-editor-id="frame.header.brand.name">DATÇAMİS</strong>
-            <small className="brand-tag" data-editor-id="frame.header.brand.tag">Datça’dan Teninize Doğadan Ruhunuza</small>
+            <strong className="brand-name" data-editor-id="frame.header.brand.name">{brand.name}</strong>
+            {brand.slogan ? <small className="brand-tag" data-editor-id="frame.header.brand.tag">{brand.slogan}</small> : null}
           </span>
         </Link>
         <nav className="desktop-nav" aria-label="Ana menü" data-editor-id="frame.header.nav">
-          {items.map((item) => (
-            <Link key={item.href} href={item.href} data-editor-id={editorMenuId("frame.header.nav", item.href)} aria-current={isCurrent(item.href, path) ? "page" : undefined}>
-              {item.label}
-            </Link>
-          ))}
+          {items.map((item, index) => {
+            const link = <MenuLink key={`${item.href}-${index}`} item={item} editorId={editorMenuId("frame.header.nav", item.href)} current={isCurrent(item.href, path)} />;
+            if (!item.children?.length) return link;
+            return (
+              <div key={`${item.href}-${index}`} className="nav-drop">
+                {link}
+                <div className="nav-sub">
+                  {item.children.map((child, at) => (
+                    <MenuLink key={`${child.href}-${at}`} item={child} editorId={editorMenuId("frame.header.nav", child.href)} current={isCurrent(child.href, path)} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
         <div className="header-tools" data-editor-id="frame.header.tools">
           <Link className="icon-btn tool-extra" href="/arama" aria-label="Arama" data-editor-id="frame.header.tools.search">
@@ -58,11 +71,29 @@ export function Header({ items }: { items: MenuItem[] }) {
       </div>
       {open ? (
         <div className="wrap mobile-drawer" data-editor-id="frame.header.drawer">
-          {items.map((item) => (
-            <Link key={item.href} href={item.href} data-editor-id={editorMenuId("frame.header.drawer", item.href)} aria-current={isCurrent(item.href, path) ? "page" : undefined} onClick={() => setOpen(false)}>
-              {item.label}
-            </Link>
-          ))}
+          {items.map((item, index) => {
+            const close = () => setOpen(false);
+            if (!item.children?.length) {
+              return <MenuLink key={`${item.href}-${index}`} item={item} editorId={editorMenuId("frame.header.drawer", item.href)} current={isCurrent(item.href, path)} onClick={close} />;
+            }
+            const expanded = openGroup === index;
+            return (
+              <div key={`${item.href}-${index}`} className="drawer-group">
+                <button type="button" className="drawer-parent" aria-expanded={expanded} data-editor-id={editorMenuId("frame.header.drawer", item.href)} onClick={() => setOpenGroup(expanded ? null : index)}>
+                  <span>{item.label}</span>
+                  <span className="drawer-chevron" aria-hidden="true" />
+                </button>
+                {expanded ? (
+                  <div className="drawer-sub">
+                    <MenuLink item={{ ...item, label: "Tümünü gör" }} current={path === item.href} onClick={close} />
+                    {item.children.map((child, at) => (
+                      <MenuLink key={`${child.href}-${at}`} item={child} current={isCurrent(child.href, path)} onClick={close} />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
           <Link href="/arama" data-editor-id="frame.header.drawer.arama" onClick={() => setOpen(false)}>Arama</Link>
           <Link href={accountHref} data-editor-id="frame.header.drawer.hesap" onClick={() => setOpen(false)}>{accountLabel}</Link>
           <Link href="/favoriler" data-editor-id="frame.header.drawer.favoriler" onClick={() => setOpen(false)}>Favoriler</Link>

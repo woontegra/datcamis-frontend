@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { BuyBox } from "@/components/store/BuyBox";
+import { ProductView } from "@/components/store/ProductView";
 import { FavoriteButton } from "@/components/store/FavoriteButton";
 import { getProduct, orNotFound } from "@/lib/store";
 
@@ -41,18 +41,22 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   };
   return (
     <article className="wrap detail">
-      <div className="detail-visual">
-        {image ? <img src={image.url} alt={image.alt} /> : null}
-      </div>
-      <div>
+      <ProductView
+        image={image ? { url: image.url, alt: image.alt } : null}
+        variants={product.variants}
+        options={product.options}
+        after={
+          <>
+            <FavoriteButton slug={product.slug} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+          </>
+        }
+      >
         <p className="eyebrow">{product.categories.map((item) => item.name).join(" · ")}</p>
         <h1>{product.name}</h1>
         {product.isSeed ? <p className="seed-pill">Seed / test kaydı</p> : null}
         <p className="lede">{product.description}</p>
-        <BuyBox variants={product.variants} />
-        <FavoriteButton slug={product.slug} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      </div>
+      </ProductView>
     </article>
   );
 }

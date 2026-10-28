@@ -1,6 +1,8 @@
+import { cache } from "react";
 import { ApiError, serverApi } from "./api";
+import { EMPTY_SETTINGS, normalizeSettings, type PublicSettings } from "./site-settings";
 import { emptyDraft, HOME_EDITOR_SLUG, readHomeEditor, sameEditorDraft, type EditorDraft } from "./editor-elements";
-import type { Category, Collection, MenuItem, PageDocument, PostCard, Product, SeoMeta } from "./types";
+import type { Category, Collection, MenuItem, PageDocument, PostCard, Product, SeoMeta, StoreMenus } from "./types";
 
 const fallbackMenu: MenuItem[] = [
   { label: "Ana Sayfa", href: "/" },
@@ -11,23 +13,28 @@ const fallbackMenu: MenuItem[] = [
   { label: "İletişim", href: "/iletisim" },
 ];
 
-export async function getMenu() {
+type MenuSlot = { name: string; items: MenuItem[] } | null;
+
+export async function getMenus(): Promise<StoreMenus> {
   try {
-    const body = await serverApi<{ data: { items: MenuItem[] } }>("/content/menus/header");
-    return body.data.items.length ? body.data.items : fallbackMenu;
+    const body = await serverApi<{ data: Record<"HEADER" | "FOOTER_1" | "FOOTER_2" | "FOOTER_3", MenuSlot> }>("/content/menus");
+    const footer = [body.data.FOOTER_1, body.data.FOOTER_2, body.data.FOOTER_3]
+      .filter((slot): slot is NonNullable<MenuSlot> => Boolean(slot && slot.items.length))
+      .map((slot) => ({ title: slot.name, items: slot.items }));
+    return { header: body.data.HEADER ? body.data.HEADER.items : fallbackMenu, footer };
   } catch {
-    return fallbackMenu;
+    return { header: fallbackMenu, footer: [] };
   }
 }
 
-export async function getSettings() {
+export const getSettings = cache(async (): Promise<PublicSettings> => {
   try {
-    const body = await serverApi<{ data: Record<string, unknown> }>("/settings/public");
-    return body.data;
+    const body = await serverApi<{ data: unknown }>("/settings/public");
+    return normalizeSettings(body.data);
   } catch {
-    return {};
+    return EMPTY_SETTINGS;
   }
-}
+});
 
 export async function getProducts(query = "") {
   const body = await serverApi<{ data: Product[]; meta: { total: number } }>(`/catalog/products${query}`);

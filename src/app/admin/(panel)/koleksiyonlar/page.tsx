@@ -1,12 +1,10 @@
-import { Rows } from "@/components/admin/Rows";
+import { CollectionManager, type AdminCollection } from "@/components/admin/taxonomy/CollectionManager";
 import { adminApi } from "@/lib/admin";
 
 export default async function CollectionsAdmin() {
-  const body = await adminApi<{ data: { name: string; slug: string }[] }>("/admin/collections");
-  return (
-    <>
-      <div className="admin-top"><h1>Koleksiyonlar</h1></div>
-      <section className="panel-admin"><Rows headers={["Ad", "Slug"]} rows={body.data.map((row) => [row.name, row.slug])} /></section>
-    </>
-  );
+  const [collections, categories] = await Promise.all([
+    adminApi<{ data: AdminCollection[]; meta: { canEdit: boolean } }>("/admin/collections"),
+    adminApi<{ data: Array<{ id: string; name: string; parentId: string | null }> }>("/admin/categories"),
+  ]);
+  return <CollectionManager initial={collections.data} canEdit={collections.meta.canEdit} categories={categories.data} />;
 }

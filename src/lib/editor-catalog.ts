@@ -147,7 +147,26 @@ export function describeEditorNode(id: string): EditorNodeInfo | null {
     const scope = menu[1];
     return node(scope === "nav" ? "Menü bağlantısı" : "Mobil menü bağlantısı", `frame.header.${scope}`);
   }
+  const footer = id.match(/^frame\.footer\.(collections|house|links3)(?:\.([a-z0-9-]+))?$/);
+  if (footer) {
+    const column = `frame.footer.${footer[1]}`;
+    if (!footer[2]) return node("Footer sütunu", "frame.footer");
+    return node(footer[2] === "title" ? "Sütun başlığı" : "Menü bağlantısı", column);
+  }
   return null;
+}
+
+/** Footer menu columns keep the editor ids the hand-written columns used. */
+export const FOOTER_COLUMN_IDS = ["frame.footer.collections", "frame.footer.house", "frame.footer.links3"] as const;
+
+const TR_CHARS: Record<string, string> = { ç: "c", ğ: "g", ı: "i", İ: "i", ö: "o", ş: "s", ü: "u", Ç: "c", Ğ: "g", Ö: "o", Ş: "s", Ü: "u" };
+
+export function editorLinkKey(label: string) {
+  return label
+    .replace(/[çğıİöşüÇĞÖŞÜ]/g, (char) => TR_CHARS[char] || char)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "link";
 }
 
 export function editorMenuId(scope: "frame.header.nav" | "frame.header.drawer", href: string) {

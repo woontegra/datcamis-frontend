@@ -7,10 +7,18 @@ export type Variant = {
   currency: string;
   isDefault: boolean;
   inStock: boolean;
-  options: { name: string; value: string }[];
+  options: { optionId?: string; valueId?: string; name: string; value: string }[];
+  image?: { id: string; alt: string; url: string } | null;
   onHand?: number;
   reserved?: number;
   lowThreshold?: number;
+};
+
+export type StoreOptionGroup = {
+  id: string;
+  name: string;
+  displayType: "BUTTONS" | "SELECT" | "SWATCH";
+  values: Array<{ id: string; name: string; colorHex: string | null }>;
 };
 
 export type Product = {
@@ -23,6 +31,7 @@ export type Product = {
   isSeed: boolean;
   images: { id: string; alt: string; url: string }[];
   variants: Variant[];
+  options?: StoreOptionGroup[];
   categories: { slug: string; name: string }[];
   collections: { slug: string; name: string }[];
   seo?: SeoMeta | null;
@@ -38,7 +47,9 @@ export type SeoMeta = {
 
 export type Collection = { id: string; slug: string; name: string; description: string; seo?: SeoMeta | null };
 export type Category = Collection;
-export type MenuItem = { label: string; href: string };
+export type MenuItem = { label: string; href: string; newTab?: boolean; children?: MenuItem[] };
+export type FooterMenu = { title: string; items: MenuItem[] };
+export type StoreMenus = { header: MenuItem[]; footer: FooterMenu[] };
 export type PostCard = { slug: string; title: string; excerpt: string; publishedAt: string | null; isSeed: boolean };
 
 export type Visibility = { desktop: boolean; tablet: boolean; mobile: boolean };

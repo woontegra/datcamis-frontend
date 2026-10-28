@@ -73,7 +73,7 @@ export type AccountOrderDetail = AccountOrderSummary & {
     sameAsShipping: boolean;
     address: AccountOrderAddress;
   };
-  havale: { bankName: string; accountHolder: string; iban: string } | null;
+  havale: { bankName: string; accountHolder: string; iban: string; paymentDueDays?: number | null } | null;
 };
 
 export function formatDate(value: string) {

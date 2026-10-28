@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { browserApi } from "@/lib/api";
 import { MediaUploader } from "@/components/admin/MediaUploader";
 import type { MediaItem } from "@/lib/editor-images";
+import type { UploadUsage } from "@/lib/media-upload";
 
-export function ProductMediaPicker({ onPick }: { onPick: (item: MediaItem) => void }) {
+export function ProductMediaPicker({ onPick, usage = "product" }: { onPick: (item: MediaItem) => void; usage?: UploadUsage }) {
   const [items, setItems] = useState<MediaItem[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -32,7 +33,7 @@ export function ProductMediaPicker({ onPick }: { onPick: (item: MediaItem) => vo
           ))}
         </div>
       ) : null}
-      <MediaUploader compact usage="product" onUploaded={(item) => { onPick(item); void load().catch(() => undefined); }} />
+      <MediaUploader compact usage={usage} onUploaded={(item) => { onPick(item); void load().catch(() => undefined); }} />
     </div>
   );
 }

@@ -1,12 +1,7 @@
-import { Rows } from "@/components/admin/Rows";
+import { CategoryManager, type AdminCategory } from "@/components/admin/taxonomy/CategoryManager";
 import { adminApi } from "@/lib/admin";
 
 export default async function CategoriesAdmin() {
-  const body = await adminApi<{ data: { name: string; slug: string }[] }>("/admin/categories");
-  return (
-    <>
-      <div className="admin-top"><h1>Kategoriler</h1></div>
-      <section className="panel-admin"><Rows headers={["Ad", "Slug"]} rows={body.data.map((row) => [row.name, row.slug])} /></section>
-    </>
-  );
+  const body = await adminApi<{ data: AdminCategory[]; meta: { canEdit: boolean; maxDepth: number } }>("/admin/categories");
+  return <CategoryManager initial={body.data} canEdit={body.meta.canEdit} maxDepth={body.meta.maxDepth} />;
 }

@@ -45,13 +45,13 @@ const HEADER_ACTION: Record<string, string> = {
   RETURNED: "İade al",
 };
 
-export function OrderDetail({ order: initial }: { order: AdminOrder }) {
+export function OrderDetail({ order: initial, defaultCarrier = "" }: { order: AdminOrder; defaultCarrier?: string }) {
   const router = useRouter();
   const [order, setOrder] = useState(initial);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [staffNote, setStaffNote] = useState(initial.staffNote ?? "");
-  const [carrier, setCarrier] = useState(initial.shipment?.carrier ?? "");
+  const [carrier, setCarrier] = useState(initial.shipment?.carrier || (isListedCarrier(defaultCarrier) ? defaultCarrier : ""));
   const [carrierOther, setCarrierOther] = useState(() => Boolean(initial.shipment?.carrier && !isListedCarrier(initial.shipment.carrier)));
   const [trackingNumber, setTrackingNumber] = useState(initial.shipment?.trackingNumber ?? "");
   const [copied, setCopied] = useState("");
@@ -119,7 +119,7 @@ export function OrderDetail({ order: initial }: { order: AdminOrder }) {
       const saved = await browserApi<{ data: AdminOrder }>(`/admin/orders/${order.id}`, { method: "PATCH", body: JSON.stringify(body) });
       setOrder(saved.data);
       if (body.staffNote !== undefined) setStaffNote(saved.data.staffNote ?? "");
-      setCarrier(saved.data.shipment.carrier);
+      setCarrier(saved.data.shipment.carrier || (isListedCarrier(defaultCarrier) ? defaultCarrier : ""));
       setCarrierOther(Boolean(saved.data.shipment.carrier && !isListedCarrier(saved.data.shipment.carrier)));
       setTrackingNumber(saved.data.shipment.trackingNumber);
       setInvoiceIssued(saved.data.invoice?.issued ?? false);

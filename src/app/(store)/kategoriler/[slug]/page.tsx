@@ -7,7 +7,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const category = await orNotFound(() => getCategory(slug));
   if (!category) return { title: "Kategori" };
-  return { title: category.name, description: category.seo?.description || category.description };
+  return { title: category.seo?.title || category.name, description: category.seo?.description || category.description };
 }
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {

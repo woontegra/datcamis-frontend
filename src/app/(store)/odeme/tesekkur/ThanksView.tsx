@@ -10,10 +10,12 @@ import { formatIbanGroups } from "@/lib/iban";
 
 type ThanksData = {
   number: string;
+  subtotalAmount?: number;
+  shippingAmount?: number;
   totalAmount: number;
   paid: boolean;
   paymentProvider: "havale" | "paytr" | "other";
-  havale: { bankName: string; accountHolder: string; iban: string } | null;
+  havale: { bankName: string; accountHolder: string; iban: string; paymentDueDays?: number | null } | null;
   shipping: { fullName: string; line1: string; district: string; city: string };
   items: Array<{
     productName: string;
@@ -95,6 +97,8 @@ export function ThanksView({ accessKey }: { accessKey: string }) {
           </li>
         ))}
       </ul>
+      {data.subtotalAmount !== undefined ? <div className="summary-row"><span>Ara toplam</span><span>{formatTry(data.subtotalAmount)}</span></div> : null}
+      {data.shippingAmount !== undefined ? <div className="summary-row"><span>Kargo</span><span>{data.shippingAmount === 0 ? "Ücretsiz" : formatTry(data.shippingAmount)}</span></div> : null}
       <div className="summary-row is-total"><span>Toplam</span><span>{formatTry(data.totalAmount)}</span></div>
       <div className="summary-row thanks-ship">
         <span>Teslimat</span>
@@ -163,6 +167,9 @@ export function ThanksView({ accessKey }: { accessKey: string }) {
               <p className="thanks-warn">
                 Ödemenizin eşleşmesi için açıklamaya mutlaka <strong>{data.number}</strong> yazın.
               </p>
+              {data.havale.paymentDueDays ? (
+                <p className="thanks-due">Lütfen <strong>{data.havale.paymentDueDays} gün içinde</strong> ödeme yapın.</p>
+              ) : null}
             </section>
           ) : (
             <section className="checkout-block thanks-paid">

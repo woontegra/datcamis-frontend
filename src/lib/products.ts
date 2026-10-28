@@ -28,6 +28,14 @@ export type AdminProductListItem = {
   featured: boolean;
 };
 
+export type ProductOptionGroup = {
+  id: string;
+  attributeId: string | null;
+  name: string;
+  displayType: "BUTTONS" | "SELECT" | "SWATCH";
+  values: Array<{ id: string; attributeValueId: string | null; name: string; colorHex: string | null }>;
+};
+
 export type AdminProduct = {
   id: string;
   name: string;
@@ -57,7 +65,9 @@ export type AdminProduct = {
     reserved: number;
     lowThreshold: number;
     image: { id: string; url: string; alt: string } | null;
+    optionValueIds: string[];
   }[];
+  options: ProductOptionGroup[];
   categories: { id: string; slug: string; name: string }[];
   collections: { id: string; slug: string; name: string }[];
   seo: { title: string | null; description: string | null; robotsIndex: boolean; ogMediaId: string | null } | null;

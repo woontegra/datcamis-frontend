@@ -13,6 +13,7 @@ import { formatTry } from "@/lib/money";
 import { PROVINCE_NAMES, districtsOf } from "@/lib/turkey-locations";
 import { AddressFields } from "@/components/store/AddressFields";
 import { PlaceSelect } from "@/components/store/PlaceSelect";
+import { ShippingHint, shippingLabel } from "@/components/store/ShippingHint";
 
 type PaymentConfig = {
   card: { enabled: boolean; message: string };
@@ -139,10 +140,16 @@ export default function CheckoutPage() {
     setBilling((current) => ({ ...current, [key]: value }));
   }
 
-  const total = cart?.subtotalAmount || 0;
-  const canCheckout = Boolean(config?.canCheckout);
+  const subtotal = cart?.subtotalAmount || 0;
+  const total = cart?.totalAmount ?? subtotal;
+  const minOrderMessage = cart?.minOrderMessage || "";
+  const canCheckout = Boolean(config?.canCheckout) && !minOrderMessage;
 
   async function submit() {
+    if (minOrderMessage) {
+      setMessage(minOrderMessage);
+      return;
+    }
     const sameAsShipping = !customInvoice;
     const type = customInvoice ? invoiceType : "INDIVIDUAL";
     const billingToSend = {
@@ -235,9 +242,15 @@ export default function CheckoutPage() {
           </li>
         ))}
       </ul>
-      <div className="summary-row"><span>Ara toplam</span><span>{formatTry(total)}</span></div>
-      <div className="summary-row"><span>Kargo</span><span>0,00 TL</span></div>
+      <div className="summary-row"><span>Ara toplam</span><span>{formatTry(subtotal)}</span></div>
+      <div className="summary-row"><span>Kargo</span><span>{shippingLabel(cart?.shippingAmount)}</span></div>
       <div className="summary-row is-total"><span>Toplam</span><span>{formatTry(total)}</span></div>
+      {cart ? <ShippingHint cart={cart} /> : null}
+      {minOrderMessage ? (
+        <p className="summary-note is-warning" role="alert">
+          {minOrderMessage} <Link href="/urunler">Ürünlere dön</Link>
+        </p>
+      ) : null}
       <label className="field-check terms-check">
         <input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} />
         <span>
@@ -252,7 +265,7 @@ export default function CheckoutPage() {
         Siparişi tamamla
       </button>
       <p className="secure-note">Güvenli ödeme</p>
-      {!canCheckout && config ? <p className="error">{config.noneMessage}</p> : null}
+      {!config?.canCheckout && config ? <p className="error">{config.noneMessage}</p> : null}
       {message ? <p className="error">{message}</p> : null}
     </>
   );
@@ -448,6 +461,11 @@ export default function CheckoutPage() {
                 </label>
                 <FieldError message={errors.paymentMethod} />
               </section>
+              {minOrderMessage ? (
+                <p className="summary-note is-warning checkout-submit-mobile" role="alert">
+                  {minOrderMessage} <Link href="/urunler">Ürünlere dön</Link>
+                </p>
+              ) : null}
               <button className="green-btn checkout-submit-mobile" type="submit" disabled={!canCheckout}>Siparişi tamamla</button>
             </form>
             <aside className="order-summary is-desktop">

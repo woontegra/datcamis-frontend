@@ -82,6 +82,7 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
             <CopyButton value={order.number} label="Açıklama" />
           </div>
           <p className="thanks-warn">Ödemenizin eşleşmesi için açıklamaya mutlaka <strong>{order.number}</strong> yazın.</p>
+          {order.havale.paymentDueDays ? <p className="thanks-due">Lütfen <strong>{order.havale.paymentDueDays} gün içinde</strong> ödeme yapın.</p> : null}
         </section>
       ) : null}
 
@@ -102,7 +103,7 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
           </ul>
           <div className="summary-row"><span>Ara toplam</span><span>{formatTry(order.subtotalAmount)}</span></div>
           {order.discountAmount > 0 ? <div className="summary-row"><span>İndirim</span><span>−{formatTry(order.discountAmount)}</span></div> : null}
-          <div className="summary-row"><span>Kargo</span><span>{formatTry(order.shippingAmount)}</span></div>
+          <div className="summary-row"><span>Kargo</span><span>{order.shippingAmount === 0 ? "Ücretsiz" : formatTry(order.shippingAmount)}</span></div>
           <div className="summary-row is-total"><span>Toplam</span><span>{formatTry(order.totalAmount)}</span></div>
           {order.paymentMethod ? <div className="summary-row"><span>Ödeme yöntemi</span><span>{order.paymentMethod}</span></div> : null}
         </section>

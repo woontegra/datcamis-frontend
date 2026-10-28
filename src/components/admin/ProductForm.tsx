@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { browserApi } from "@/lib/api";
 import { PRODUCT_STATUS_LABEL, suggestSlug, type AdminProduct } from "@/lib/products";
 import { ProductMediaPicker } from "./ProductMediaPicker";
 import type { MediaItem } from "@/lib/editor-images";
+import { activeGroups, combinations, comboLabel, MAX_PRODUCT_OPTIONS, planRows, type OptionPick } from "@/lib/variant-options";
+import type { AdminAttribute } from "./attributes/AttributeManager";
+
+const VAT_RATES = [1, 10, 20] as const;
+const DEFAULT_NEW_VAT_RATE = 20;
+const VAT_REQUIRED_TEXT = "KDV oranı seçin: %1, %10 veya %20.";
 
 type Category = { id: string; name: string };
 type Collection = { id: string; name: string };
@@ -34,20 +41,27 @@ type VariantRow = {
   isDefault: boolean;
   mediaId: string;
   url: string;
+  valueIds: string[];
 };
 
 function emptyVariant(): VariantRow {
-  return { name: "100 ml", sku: "", barcode: "", priceTl: "0,00", compareTl: "", weightGrams: "", desi: "", lowThreshold: "5", disabled: false, isDefault: true, mediaId: "", url: "" };
+  return { name: "Standart", sku: "", barcode: "", priceTl: "0,00", compareTl: "", weightGrams: "", desi: "", lowThreshold: "5", disabled: false, isDefault: true, mediaId: "", url: "", valueIds: [] };
+}
+
+function skuPart(value: string) {
+  return suggestSlug(value).toUpperCase();
 }
 
 export function ProductForm({
   product,
   categories,
   collections,
+  attributes = [],
 }: {
   product?: AdminProduct;
   categories: Category[];
   collections: Collection[];
+  attributes?: AdminAttribute[];
 }) {
   const router = useRouter();
   const permissions = product?.permissions ?? { canEdit: true, canPrice: true, canStock: true, canArchive: true };
@@ -60,7 +74,10 @@ export function ProductForm({
   const [usageNotes, setUsageNotes] = useState(product?.usageNotes ?? "");
   const [warningNotes, setWarningNotes] = useState(product?.warningNotes ?? "");
   const [featured, setFeatured] = useState(product?.featured ?? false);
-  const [vatRate, setVatRate] = useState(product?.vatRate == null ? "" : String(product.vatRate));
+  const [vatRate, setVatRate] = useState(() => {
+    const initial = product ? product.vatRate : DEFAULT_NEW_VAT_RATE;
+    return initial != null && (VAT_RATES as readonly number[]).includes(initial) ? String(initial) : "";
+  });
   const [status, setStatus] = useState(product?.status ?? "DRAFT");
   const [categoryIds, setCategoryIds] = useState(product?.categories.map((item) => item.id) ?? []);
   const [collectionIds, setCollectionIds] = useState(product?.collections.map((item) => item.id) ?? []);
@@ -80,8 +97,19 @@ export function ProductForm({
       isDefault: variant.isDefault,
       mediaId: variant.image?.id ?? "",
       url: variant.image?.url ?? "",
+      valueIds: variant.optionValueIds ?? [],
     })) ?? [emptyVariant()],
   );
+  const legacyOptions = Boolean(product?.options?.some((option) => !option.attributeId));
+  const [picks, setPicks] = useState<OptionPick[]>(() =>
+    legacyOptions
+      ? []
+      : (product?.options ?? []).map((option) => ({ attributeId: option.attributeId!, valueIds: option.values.map((value) => value.attributeValueId!).filter(Boolean) })),
+  );
+  const [addingOption, setAddingOption] = useState(false);
+  const [samePrice, setSamePrice] = useState({ price: "", compare: "" });
+  const groups = activeGroups(picks, attributes);
+  const hasOptions = groups.length > 0;
   const [seoTitle, setSeoTitle] = useState(product?.seo?.title ?? "");
   const [seoDescription, setSeoDescription] = useState(product?.seo?.description ?? "");
   const [robotsIndex, setRobotsIndex] = useState(product?.seo?.robotsIndex !== false);
@@ -137,9 +165,57 @@ export function ProductForm({
       isDefault: variant.isDefault || index === 0,
       disabled: variant.disabled,
       lowThreshold: Number(variant.lowThreshold) || 0,
+      optionValueIds: variant.valueIds,
     })),
+    ...(legacyOptions ? {} : { options: picks.map((pick) => ({ attributeId: pick.attributeId, valueIds: pick.valueIds })) }),
     seo: { title: seoTitle || null, description: seoDescription || null, robotsIndex, ogMediaId: ogMediaId || null },
-  }), [name, slug, summary, description, content, usageNotes, warningNotes, featured, vatRate, status, categoryIds, collectionIds, images, variants, seoTitle, seoDescription, robotsIndex, ogMediaId]);
+  }), [name, slug, summary, description, content, usageNotes, warningNotes, featured, vatRate, status, categoryIds, collectionIds, images, variants, picks, legacyOptions, seoTitle, seoDescription, robotsIndex, ogMediaId]);
+
+  function changePicks(next: OptionPick[]) {
+    const before = activeGroups(picks, attributes);
+    const after = activeGroups(next, attributes);
+    if (!before.length && !after.length) {
+      setPicks(next);
+      setDirty(true);
+      return;
+    }
+    const template = variants[0] ?? emptyVariant();
+    const base = skuPart(slug || name) || "URUN";
+    const combos = after.length ? combinations(after.map((group) => group.valueIds)) : [];
+    const plan = planRows(variants, before.length > 0, combos, (combo) => ({
+      ...emptyVariant(),
+      priceTl: template.priceTl,
+      compareTl: template.compareTl,
+      weightGrams: template.weightGrams,
+      desi: template.desi,
+      lowThreshold: template.lowThreshold,
+      isDefault: false,
+      sku: [base, ...combo.map((id) => skuPart(attributes.flatMap((item) => item.values).find((value) => value.id === id)?.name ?? ""))].join("-"),
+      valueIds: combo,
+    }));
+    if (plan.removed.length) {
+      const list = plan.removed.map((row) => `• ${row.name}`).join("\n");
+      const ok = window.confirm(
+        `Şu varyantlar üründen kaldırılacak:\n${list}\n\nSiparişi olan varyant silinmez, pasife alınır. Değişiklik “Kaydet” ile uygulanır. Devam edilsin mi?`,
+      );
+      if (!ok) return;
+    }
+    setPicks(next);
+    setVariants(
+      plan.rows.map((row, index) => ({
+        ...row,
+        name: row.valueIds.length ? comboLabel(row.valueIds, attributes) : row.name,
+        isDefault: after.length ? index === 0 : row.isDefault,
+      })),
+    );
+    setDirty(true);
+  }
+
+  function applySamePrice() {
+    if (!samePrice.price.trim()) return;
+    setDirty(true);
+    setVariants((rows) => rows.map((row) => ({ ...row, priceTl: samePrice.price.trim(), compareTl: samePrice.compare.trim() })));
+  }
 
   function mark<T>(setter: (value: T) => void) {
     return (value: T) => {
@@ -150,6 +226,15 @@ export function ProductForm({
 
   async function save() {
     setMessage("");
+    if (permissions.canPrice && !vatRate) {
+      setMessage(VAT_REQUIRED_TEXT);
+      return;
+    }
+    const emptyPick = picks.find((pick) => !pick.valueIds.length);
+    if (emptyPick) {
+      setMessage(`“${attributes.find((item) => item.id === emptyPick.attributeId)?.name ?? "Seçenek"}” için en az bir değer işaretleyin veya seçeneği kaldırın.`);
+      return;
+    }
     try {
       if (product) await browserApi(`/admin/products/${product.id}`, { method: "PATCH", body: JSON.stringify(payload) });
       else {
@@ -230,10 +315,101 @@ export function ProductForm({
       <section className="panel-admin" style={{ marginTop: "0.7rem" }}>
         <strong>Varyantlar</strong>
         <p className="order-manual">Fiyatlar KDV dahildir. İndirim öncesi fiyat, satış fiyatından yüksek olmalıdır; boşsa çizili fiyat gösterilmez.</p>
+
+        {legacyOptions ? (
+          <p className="summary-note is-warning">Bu ürünün seçenekleri eski biçimde. Seçenekleri düzenlemek için önce varyant aktarım betiğinin çalıştırılması gerekir.</p>
+        ) : (
+          <div className="pf-options">
+            {picks.map((pick) => {
+              const attribute = attributes.find((item) => item.id === pick.attributeId);
+              if (!attribute) return null;
+              return (
+                <div className="pf-option" key={pick.attributeId}>
+                  <div className="pf-option-head">
+                    <strong>{attribute.name}</strong>
+                    {permissions.canPrice ? (
+                      <button type="button" className="attr-remove" onClick={() => changePicks(picks.filter((item) => item.attributeId !== pick.attributeId))}>Seçeneği kaldır</button>
+                    ) : null}
+                  </div>
+                  <div className="pf-option-values">
+                    {attribute.values.map((value) => (
+                      <label key={value.id} className={`pf-chip${pick.valueIds.includes(value.id) ? " is-on" : ""}`}>
+                        <input
+                          type="checkbox"
+                          checked={pick.valueIds.includes(value.id)}
+                          disabled={!permissions.canPrice}
+                          onChange={(event) =>
+                            changePicks(
+                              picks.map((item) =>
+                                item.attributeId === pick.attributeId
+                                  ? { ...item, valueIds: event.target.checked ? [...item.valueIds, value.id] : item.valueIds.filter((id) => id !== value.id) }
+                                  : item,
+                              ),
+                            )
+                          }
+                        />
+                        {attribute.displayType === "SWATCH" ? <span className="pf-dot" style={{ background: value.colorHex || "#cccccc" }} aria-hidden="true" /> : null}
+                        {value.name}
+                      </label>
+                    ))}
+                    {!attribute.values.length ? <span className="settings-note">Bu özelliğin değeri yok; Varyantlar sayfasından ekleyin.</span> : null}
+                  </div>
+                </div>
+              );
+            })}
+            {permissions.canPrice && picks.length < MAX_PRODUCT_OPTIONS ? (
+              addingOption ? (
+                <label className="field pf-option-add">Seçenek seç
+                  <select
+                    defaultValue=""
+                    onChange={(event) => {
+                      if (!event.target.value) return;
+                      changePicks([...picks, { attributeId: event.target.value, valueIds: [] }]);
+                      setAddingOption(false);
+                    }}
+                  >
+                    <option value="" disabled>Özellik seçin</option>
+                    {attributes.filter((item) => !picks.some((pick) => pick.attributeId === item.id)).map((item) => (
+                      <option key={item.id} value={item.id}>{item.name} ({item.values.length} değer)</option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <div className="order-actions">
+                  <button type="button" className="text-btn" onClick={() => setAddingOption(true)} disabled={!attributes.length}>+ Seçenek ekle</button>
+                  <Link className="pf-manage" href="/admin/varyantlar">Varyant seçeneklerini yönet</Link>
+                </div>
+              )
+            ) : null}
+            {hasOptions ? (
+              <p className="order-manual">
+                {groups.map((group) => `${group.attribute.name} (${group.valueIds.length})`).join(" × ")} = {variants.filter((row) => row.valueIds.length).length} varyant
+              </p>
+            ) : null}
+          </div>
+        )}
+
+        {permissions.canPrice && variants.length > 1 ? (
+          <div className="pf-same-price">
+            <span>Tüm varyantlara aynı fiyatı uygula</span>
+            <input value={samePrice.price} placeholder="Satış fiyatı" aria-label="Satış fiyatı" onChange={(event) => setSamePrice({ ...samePrice, price: event.target.value })} />
+            <input value={samePrice.compare} placeholder="İndirim öncesi (isteğe bağlı)" aria-label="İndirim öncesi fiyat" onChange={(event) => setSamePrice({ ...samePrice, compare: event.target.value })} />
+            <button type="button" className="text-btn" onClick={applySamePrice} disabled={!samePrice.price.trim()}>Uygula</button>
+          </div>
+        ) : null}
+
         {variants.map((variant, index) => (
-          <article className="admin-card" key={variant.id || `new-${index}`} style={{ marginTop: "0.5rem" }}>
+          <article className={`admin-card${hasOptions && !variant.valueIds.length ? " pf-leftover" : ""}`} key={variant.id || `new-${variant.valueIds.join("-") || index}`} style={{ marginTop: "0.5rem" }}>
+            {hasOptions ? (
+              <p className="pf-variant-title">
+                <strong>{variant.name}</strong>
+                {!variant.valueIds.length ? <span className="settings-note"> · Seçeneği kaldırıldı; siparişi olduğu için pasif tutuluyor.</span> : null}
+              </p>
+            ) : null}
             <div className="form-grid two">
-              <label className="field">Ad<input value={variant.name} disabled={!permissions.canPrice} onChange={(event) => { setDirty(true); setVariants((rows) => rows.map((row, i) => i === index ? { ...row, name: event.target.value } : row)); }} /></label>
+              {!hasOptions ? (
+                <label className="field">Ad<input value={variant.name} disabled={!permissions.canPrice} onChange={(event) => { setDirty(true); setVariants((rows) => rows.map((row, i) => i === index ? { ...row, name: event.target.value } : row)); }} /></label>
+              ) : null}
               <label className="field">SKU<input value={variant.sku} disabled={!permissions.canPrice} onChange={(event) => { setDirty(true); setVariants((rows) => rows.map((row, i) => i === index ? { ...row, sku: event.target.value } : row)); }} /></label>
               <label className="field">Barkod<input value={variant.barcode} disabled={!permissions.canPrice} onChange={(event) => { setDirty(true); setVariants((rows) => rows.map((row, i) => i === index ? { ...row, barcode: event.target.value } : row)); }} /></label>
               <label className="field">Satış fiyatı (KDV dahil)<input value={variant.priceTl} disabled={!permissions.canPrice} onChange={(event) => { setDirty(true); setVariants((rows) => rows.map((row, i) => i === index ? { ...row, priceTl: event.target.value } : row)); }} /></label>
@@ -242,7 +418,7 @@ export function ProductForm({
               <label className="field">Desi<input value={variant.desi} disabled={!permissions.canPrice} onChange={(event) => { setDirty(true); setVariants((rows) => rows.map((row, i) => i === index ? { ...row, desi: event.target.value } : row)); }} /></label>
               <label className="field">Kritik stok<input value={variant.lowThreshold} disabled={!permissions.canPrice} onChange={(event) => { setDirty(true); setVariants((rows) => rows.map((row, i) => i === index ? { ...row, lowThreshold: event.target.value } : row)); }} /></label>
             </div>
-            <label className="field"><input type="checkbox" checked={variant.disabled} disabled={!permissions.canPrice} onChange={(event) => { setDirty(true); setVariants((rows) => rows.map((row, i) => i === index ? { ...row, disabled: event.target.checked } : row)); }} /> Pasif varyant</label>
+            <label className="field"><input type="checkbox" checked={variant.disabled || (hasOptions && !variant.valueIds.length)} disabled={!permissions.canPrice || (hasOptions && !variant.valueIds.length)} onChange={(event) => { setDirty(true); setVariants((rows) => rows.map((row, i) => i === index ? { ...row, disabled: event.target.checked } : row)); }} /> Pasif varyant</label>
             <p className="order-manual">Varyant görseli (isteğe bağlı)</p>
             {variant.url ? <img src={variant.url} alt="" style={{ width: 56, height: 56, objectFit: "cover" }} /> : null}
             <ProductMediaPicker onPick={(item) => { setDirty(true); setVariants((rows) => rows.map((row, i) => i === index ? { ...row, mediaId: item.id, url: item.url } : row)); }} />
@@ -258,7 +434,7 @@ export function ProductForm({
             ) : null}
           </article>
         ))}
-        {permissions.canPrice ? <button type="button" className="text-btn" style={{ marginTop: "0.5rem" }} onClick={() => { setDirty(true); setVariants((rows) => [...rows, { ...emptyVariant(), isDefault: false }]); }}>Varyant ekle</button> : null}
+        {permissions.canPrice && !hasOptions ? <button type="button" className="text-btn" style={{ marginTop: "0.5rem" }} onClick={() => { setDirty(true); setVariants((rows) => [...rows, { ...emptyVariant(), isDefault: false }]); }}>Varyant ekle</button> : null}
       </section>
 
       <section className="split" style={{ marginTop: "0.7rem" }}>
@@ -278,8 +454,13 @@ export function ProductForm({
         </article>
         <article className="panel-admin">
           <strong>Fiyat ve vergi</strong>
-          <p className="order-manual">Satış fiyatları KDV dahildir. KDV oranı boş bırakılabilir; varsayılan uydurulmaz.</p>
-          <label className="field">KDV oranı (%)<input value={vatRate} disabled={!permissions.canPrice} onChange={(event) => mark(setVatRate)(event.target.value)} /></label>
+          <p className="order-manual">Satış fiyatları KDV dahildir. Siparişteki KDV bu orana göre hesaplanır.</p>
+          <label className="field">KDV oranı
+            <select value={vatRate} required disabled={!permissions.canPrice} onChange={(event) => mark(setVatRate)(event.target.value)}>
+              {vatRate === "" ? <option value="" disabled>Seçin</option> : null}
+              {VAT_RATES.map((rate) => <option key={rate} value={rate}>%{rate}</option>)}
+            </select>
+          </label>
           <label className="field">Durum
             <select value={status} onChange={(event) => mark(setStatus)(event.target.value)}>
               {Object.entries(PRODUCT_STATUS_LABEL).filter(([key]) => key !== "ARCHIVED" || permissions.canArchive).map(([key, label]) => (

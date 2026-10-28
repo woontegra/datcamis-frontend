@@ -2,12 +2,13 @@ import { ApiError } from "@/lib/api";
 import { adminApi } from "@/lib/admin";
 import { OrderDetail } from "@/components/admin/OrderDetail";
 import type { AdminOrder } from "@/lib/orders";
+import { getSettings } from "@/lib/store";
 
 export default async function OrderAdminPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const body = await adminApi<{ data: AdminOrder }>(`/admin/orders/${id}`);
-    return <OrderDetail order={body.data} />;
+    const [body, settings] = await Promise.all([adminApi<{ data: AdminOrder }>(`/admin/orders/${id}`), getSettings()]);
+    return <OrderDetail order={body.data} defaultCarrier={settings.shipping.defaultCarrier} />;
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) {
       return (

@@ -32,6 +32,7 @@ export default async function ProductsAdmin({
     <>
       <div className="admin-top">
         <h1>Ürünler</h1>
+        <Link className="text-btn" href="/admin/urunler/toplu-fiyat">Toplu fiyat güncelleme</Link>
         {body.meta.canEdit ? <Link className="green-btn" href="/admin/urunler/yeni">Yeni ürün</Link> : null}
       </div>
       <form className="panel-admin order-filters" method="get">

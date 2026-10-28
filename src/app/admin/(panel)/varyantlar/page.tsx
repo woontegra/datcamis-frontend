@@ -1,23 +1,16 @@
-import { Rows } from "@/components/admin/Rows";
+import { AttributeManager, type AdminAttribute } from "@/components/admin/attributes/AttributeManager";
+import { ApiError } from "@/lib/api";
 import { adminApi } from "@/lib/admin";
-import type { Product } from "@/lib/types";
 
-export default async function VariantsAdmin() {
-  const body = await adminApi<{ data: Product[] }>("/admin/products");
-  return (
-    <>
-      <div className="admin-top"><h1>Varyantlar</h1></div>
-      <section className="panel-admin">
-        <Rows
-          headers={["SKU", "Ürün", "Ad", "Seçenek"]}
-          rows={body.data.flatMap((product) => product.variants.map((variant) => [
-            variant.sku,
-            product.name,
-            variant.name,
-            variant.options.map((option) => `${option.name}: ${option.value}`).join(", "),
-          ]))}
-        />
-      </section>
-    </>
-  );
+export default async function VariantOptionsAdmin() {
+  let body: { data: AdminAttribute[]; meta: { canEdit: boolean } };
+  try {
+    body = await adminApi("/admin/attributes");
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      return <section className="panel-admin"><p>Bu sayfayı görme yetkiniz yok.</p></section>;
+    }
+    throw error;
+  }
+  return <AttributeManager initial={body.data} canEdit={body.meta.canEdit} />;
 }

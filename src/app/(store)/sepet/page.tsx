@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/components/store/cart-context";
+import { ShippingHint, shippingLabel } from "@/components/store/ShippingHint";
 import { customerMessage } from "@/lib/api";
 import { productPhotoSlot } from "@/lib/home-visual";
 import { formatTry } from "@/lib/money";
@@ -57,8 +58,10 @@ export default function CartPage() {
           <aside className="order-summary">
             <h2>Sipariş özeti</h2>
             <div className="summary-row"><span>Ara toplam</span><span>{formatTry(cart.subtotalAmount)}</span></div>
-            <div className="summary-row"><span>Kargo</span><span>Ödemede hesaplanır</span></div>
-            <div className="summary-row is-total"><span>Toplam</span><span>{formatTry(cart.subtotalAmount)}</span></div>
+            <div className="summary-row"><span>Kargo</span><span>{shippingLabel(cart.shippingAmount)}</span></div>
+            <div className="summary-row is-total"><span>Toplam</span><span>{formatTry(cart.totalAmount ?? cart.subtotalAmount)}</span></div>
+            <ShippingHint cart={cart} />
+            {cart.minOrderMessage ? <p className="summary-note is-warning" role="status">{cart.minOrderMessage}</p> : null}
             <Link className="green-btn" href="/odeme">Ödemeye geç</Link>
             <Link className="summary-continue" href="/urunler">Alışverişe devam et</Link>
           </aside>

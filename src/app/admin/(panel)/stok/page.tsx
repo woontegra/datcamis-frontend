@@ -1,23 +1,21 @@
-import { Rows } from "@/components/admin/Rows";
+import { StockManager, type StockPayload } from "@/components/admin/inventory/StockManager";
+import { ApiError } from "@/lib/api";
 import { adminApi } from "@/lib/admin";
-import type { Product } from "@/lib/types";
+import { categoryOptions, type CategoryOption } from "@/lib/category-options";
 
 export default async function StockAdmin() {
-  const body = await adminApi<{ data: Product[] }>("/admin/products");
-  return (
-    <>
-      <div className="admin-top"><h1>Stok</h1></div>
-      <section className="panel-admin">
-        <Rows
-          headers={["SKU", "Elde", "Rezerve", "Eşik"]}
-          rows={body.data.flatMap((product) => product.variants.map((variant) => [
-            variant.sku,
-            String(variant.onHand ?? 0),
-            String(variant.reserved ?? 0),
-            String(variant.lowThreshold ?? 0),
-          ]))}
-        />
-      </section>
-    </>
-  );
+  let body: StockPayload;
+  let categories: CategoryOption[];
+  try {
+    [body, { data: categories }] = await Promise.all([
+      adminApi<StockPayload>("/admin/stock?page=1&pageSize=50"),
+      adminApi<{ data: CategoryOption[] }>("/admin/categories"),
+    ]);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      return <section className="panel-admin"><p>Bu sayfayı görme yetkiniz yok.</p></section>;
+    }
+    throw error;
+  }
+  return <StockManager initial={body} categories={categoryOptions(categories)} />;
 }

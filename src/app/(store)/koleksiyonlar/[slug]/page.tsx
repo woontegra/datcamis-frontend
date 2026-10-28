@@ -7,7 +7,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const collection = await orNotFound(() => getCollection(slug));
   if (!collection) return { title: "Koleksiyon" };
-  return { title: collection.name, description: collection.seo?.description || collection.description };
+  return { title: collection.seo?.title || collection.name, description: collection.seo?.description || collection.description };
 }
 
 export default async function CollectionPage({ params }: { params: Promise<{ slug: string }> }) {
