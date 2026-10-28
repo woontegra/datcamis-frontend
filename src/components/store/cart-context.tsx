@@ -3,8 +3,22 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { browserApi } from "@/lib/api";
 
+export type CartItem = {
+  id: string;
+  quantity: number;
+  unitAmount: number;
+  lineAmount: number;
+  variantId: string;
+  variantName: string;
+  productName: string;
+  productSlug: string;
+  isSeed: boolean;
+  available?: number;
+  image?: { url: string; alt: string } | null;
+};
+
 type CartData = {
-  items: { id: string; quantity: number; unitAmount: number; lineAmount: number; variantId: string; variantName: string; productName: string; productSlug: string; isSeed: boolean }[];
+  items: CartItem[];
   subtotalAmount: number;
 };
 
@@ -36,7 +50,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setCart(null);
       return;
     }
-    const body = await browserApi<{ data: CartData }>("/carts/current", { headers: { "x-cart-token": current } });
+    const body = await browserApi<{ data: CartData }>("/carts/current", { cache: "no-store", headers: { "x-cart-token": current } });
     setCart(body.data);
   }
 
@@ -44,7 +58,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     const current = localStorage.getItem(KEY);
     if (!current) return;
-    browserApi<{ data: CartData }>("/carts/current", { headers: { "x-cart-token": current } })
+    browserApi<{ data: CartData }>("/carts/current", { cache: "no-store", headers: { "x-cart-token": current } })
       .then((body) => {
         if (!cancelled) setCart(body.data);
       })

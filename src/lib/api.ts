@@ -3,6 +3,7 @@ export class ApiError extends Error {
     public status: number,
     message: string,
     public code?: string,
+    public details?: Array<{ path: string; message: string }>,
   ) {
     super(message);
   }
@@ -18,7 +19,7 @@ export async function serverApi<T>(path: string, init?: RequestInit): Promise<T>
   });
   const body = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new ApiError(response.status, body?.error?.message || "İstek başarısız.", body?.error?.code);
+    throw new ApiError(response.status, body?.error?.message || "İstek başarısız.", body?.error?.code, body?.error?.details);
   }
   return body as T;
 }
@@ -35,7 +36,7 @@ export async function browserApi<T>(path: string, init?: RequestInit): Promise<T
   });
   const body = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new ApiError(response.status, body?.error?.message || "İstek başarısız.", body?.error?.code);
+    throw new ApiError(response.status, body?.error?.message || "İstek başarısız.", body?.error?.code, body?.error?.details);
   }
   return body as T;
 }

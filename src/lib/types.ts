@@ -3,6 +3,7 @@ export type Variant = {
   sku: string;
   name: string;
   priceAmount: number;
+  compareAtAmount?: number | null;
   currency: string;
   isDefault: boolean;
   inStock: boolean;

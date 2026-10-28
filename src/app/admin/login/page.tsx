@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { browserApi } from "@/lib/api";
 import "./login.css";
@@ -9,6 +9,15 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [localHint, setLocalHint] = useState(false);
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    const host = window.location.hostname;
+    const local = host === "localhost" || host === "127.0.0.1";
+    setLocalHint(local);
+    if (local) setEmail((current) => current || "owner@datcamis.local");
+  }, []);
   return (
     <main className="admin-login">
       <img className="admin-login-grove" src="/home/garden-new.png" alt="" />
@@ -36,7 +45,15 @@ export default function LoginPage() {
           E-posta
           <span className="admin-login-control">
             <MailIcon />
-            <input name="email" type="email" autoComplete="username" placeholder="E-posta adresiniz" required />
+            <input
+              name="email"
+              type="email"
+              autoComplete="username"
+              placeholder="E-posta adresiniz"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
           </span>
         </label>
         <label className="admin-login-field">
@@ -65,6 +82,12 @@ export default function LoginPage() {
           Giriş <span aria-hidden="true">→</span>
         </button>
         {error ? <p className="admin-login-error">{error}</p> : null}
+        {localHint ? (
+          <p className="admin-login-hint">
+            Yerel veritabanı canlı hesapları içermez. E-posta <strong>owner@datcamis.local</strong>, şifre backend
+            <code> .env</code> içindeki <code>SEED_ADMIN_PASSWORD</code>.
+          </p>
+        ) : null}
       </form>
     </main>
   );

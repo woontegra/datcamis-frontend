@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { formatTry, defaultVariant } from "@/lib/money";
+import { defaultVariant } from "@/lib/money";
+import { Price } from "@/components/store/Price";
 import type { Product } from "@/lib/types";
 
 export function ProductCard({ product }: { product: Product }) {
@@ -17,7 +18,7 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
         <h3><Link href={`/urunler/${product.slug}`}>{product.name}</Link></h3>
         <p style={{ margin: 0, color: "var(--muted)" }}>{product.summary}</p>
-        <p style={{ margin: "0.6rem 0 0" }}>{variant ? <><span className="quiet-note">Test fiyatı</span> {formatTry(variant.priceAmount)}</> : "Fiyat yok"}</p>
+        <p style={{ margin: "0.6rem 0 0" }}>{variant ? <><span className="quiet-note">Fiyat</span> <Price amount={variant.priceAmount} compareAtAmount={variant.compareAtAmount} /></> : "Fiyat yok"}</p>
       </div>
     </article>
   );

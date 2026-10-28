@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useCart } from "./cart-context";
-import { formatTry } from "@/lib/money";
 import type { Variant } from "@/lib/types";
+import { Price } from "@/components/store/Price";
 
 export function BuyBox({ variants }: { variants: Variant[] }) {
   const { add } = useCart();
@@ -14,7 +14,7 @@ export function BuyBox({ variants }: { variants: Variant[] }) {
   if (!selected) return <p>Varyant yok.</p>;
   return (
     <div>
-      <p><span className="quiet-note">Test fiyatı</span> {formatTry(selected.priceAmount)}</p>
+      <p><span className="quiet-note">Fiyat</span> <Price amount={selected.priceAmount} compareAtAmount={selected.compareAtAmount} /></p>
       <div className="option-row" role="group" aria-label="Hacim">
         {variants.map((variant) => (
           <button key={variant.id} type="button" className="text-btn" aria-pressed={variant.id === selected.id} onClick={() => setVariantId(variant.id)}>

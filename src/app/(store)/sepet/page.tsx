@@ -2,41 +2,58 @@
 
 import Link from "next/link";
 import { useCart } from "@/components/store/cart-context";
+import { productPhotoSlot } from "@/lib/home-visual";
 import { formatTry } from "@/lib/money";
 
 export default function CartPage() {
   const { cart, update, remove } = useCart();
+  const empty = !cart || cart.items.length === 0;
+  const count = cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+
   return (
-    <div className="wrap section">
+    <div className="wrap section cart-page">
       <p className="eyebrow">Sepet</p>
-      <h1>Sepetiniz</h1>
-      {!cart || cart.items.length === 0 ? (
-        <p>Sepet boş. <Link href="/urunler">Kataloğa dön</Link></p>
+      <h1>Sepetiniz {empty ? null : <span className="cart-count">{count} ürün</span>}</h1>
+      {empty ? (
+        <div className="cart-empty">
+          <p>Sepetiniz boş.</p>
+          <Link className="green-btn" href="/urunler">Ürünlere göz at</Link>
+        </div>
       ) : (
-        <>
-          {cart.items.map((item) => (
-            <div className="cart-row" key={item.id}>
-              <div>
-                <Link href={`/urunler/${item.productSlug}`}>{item.productName}</Link>
-                <p style={{ margin: 0 }}>{item.variantName} {item.isSeed ? "· seed" : ""}</p>
-              </div>
-              <label>Adet
-                <input
-                  style={{ width: "4.5rem", marginLeft: "0.4rem" }}
-                  type="number"
-                  min={1}
-                  max={20}
-                  defaultValue={item.quantity}
-                  onChange={(event) => update(item.id, Number(event.target.value)).catch(() => undefined)}
-                />
-              </label>
-              <strong>{formatTry(item.lineAmount)}</strong>
-              <button className="text-btn" type="button" onClick={() => remove(item.id)}>Çıkar</button>
-            </div>
-          ))}
-          <p>Ara toplam: {formatTry(cart.subtotalAmount)} <span className="quiet-note">Test tutarı</span></p>
-          <Link className="green-btn" href="/odeme">Ödemeye geç</Link>
-        </>
+        <div className="cart-layout">
+          <div className="cart-list">
+            {cart.items.map((item) => {
+              const available = item.available ?? 20;
+              const src = item.image?.url || productPhotoSlot(item.productSlug);
+              return (
+                <article className="cart-line" key={item.id}>
+                  <img src={src} alt={item.image?.alt || item.productName} />
+                  <div className="cart-line-info">
+                    <Link href={`/urunler/${item.productSlug}`}>{item.productName}</Link>
+                    <p>{item.variantName}</p>
+                    <button className="cart-remove" type="button" onClick={() => void remove(item.id)}>Kaldır</button>
+                  </div>
+                  <div className="cart-line-meta">
+                    <div className="qty-stepper">
+                      <button type="button" aria-label="Azalt" disabled={item.quantity <= 1} onClick={() => void update(item.id, item.quantity - 1)}>-</button>
+                      <span>{item.quantity}</span>
+                      <button type="button" aria-label="Artır" disabled={item.quantity >= available} onClick={() => void update(item.id, item.quantity + 1)}>+</button>
+                    </div>
+                    <strong>{formatTry(item.lineAmount)}</strong>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          <aside className="order-summary">
+            <h2>Sipariş özeti</h2>
+            <div className="summary-row"><span>Ara toplam</span><span>{formatTry(cart.subtotalAmount)}</span></div>
+            <div className="summary-row"><span>Kargo</span><span>Ödemede hesaplanır</span></div>
+            <div className="summary-row is-total"><span>Toplam</span><span>{formatTry(cart.subtotalAmount)}</span></div>
+            <Link className="green-btn" href="/odeme">Ödemeye geç</Link>
+            <Link className="summary-continue" href="/urunler">Alışverişe devam et</Link>
+          </aside>
+        </div>
       )}
     </div>
   );
